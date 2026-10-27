@@ -1,0 +1,1096 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kolosseum 3D</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #dfe7ee; font-family: -apple-system, system-ui, sans-serif; }
+  canvas { display: block; }
+  #ui { position: fixed; left: 12px; top: 12px; display: flex; flex-wrap: wrap; gap: 6px; max-width: calc(100% - 300px); }
+  #stats { position: fixed; right: 12px; top: 12px; width: 236px; padding: 10px 12px 8px; border-radius: 8px; background: rgba(20,28,36,.78); color: #fff; font-size: 13px; }
+  #stats .st { display: flex; justify-content: space-between; align-items: baseline; padding: 2px 0; }
+  #stats .st span { color: rgba(255,255,255,.7); }
+  #stats .st b { font-size: 19px; font-variant-numeric: tabular-nums; }
+  #prof { display: block; margin-top: 6px; width: 236px; height: 64px; }
+  @media (max-width: 640px) { #ui { max-width: calc(100% - 24px); } #stats { top: auto; bottom: 84px; } }
+  #ui button { font: 13px/1 -apple-system, system-ui, sans-serif; padding: 8px 11px; border: 1px solid rgba(0,0,0,.15); border-radius: 6px; background: rgba(255,255,255,.88); color: #222; cursor: pointer; }
+  #ui button:hover { background: #fff; }
+  #ui button.on { background: #2f3b48; color: #fff; }
+  #info { position: fixed; left: 12px; bottom: 10px; font-size: 12px; color: #333; background: rgba(255,255,255,.75); padding: 5px 9px; border-radius: 5px; }
+  #labels div { position: fixed; left: 0; top: 0; transform: translate(-50%, -100%); font-size: 12px; font-weight: 600; color: #1d232a; background: rgba(255,255,255,.82); padding: 3px 7px; border-radius: 4px; white-space: nowrap; pointer-events: none; }
+  #spd { font-size: 13px; display: flex; align-items: center; gap: 6px; padding: 0 10px; border-radius: 6px; background: rgba(255,255,255,.88); border: 1px solid rgba(0,0,0,.15); }
+  #hud { position: fixed; left: 50%; bottom: 40px; transform: translateX(-50%); font-size: 14px; font-weight: 600; color: #fff; background: rgba(20,28,36,.72); padding: 7px 14px; border-radius: 6px; white-space: nowrap; }
+  #fps { position: fixed; right: 12px; bottom: 10px; z-index: 10; font: 700 12px/1 ui-monospace, Menlo, monospace; color: #e01818; background: rgba(255,255,255,.85); padding: 4px 7px; border-radius: 4px; pointer-events: none; }
+  #load { position: fixed; inset: 0; display: grid; place-items: center; font-size: 15px; color: #333; }
+</style>
+<script src="scene.js"></script>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div id="load">Szene wird aufgebaut …</div>
+<div id="ui">
+  <button data-view="ge">Google-Earth-Ansicht</button>
+  <button data-view="close">Kolosseum nah</button>
+  <button data-view="venezia">Piazza Venezia</button>
+  <button data-view="arco">Konstantinsbogen</button>
+  <button data-view="top">Draufsicht</button>
+  <button id="rot">Rundflug</button>
+  <button id="lab" class="on">Beschriftung</button>
+  <button id="ride">Radfahrt ▶</button>
+  <button id="routeBtn" class="on">Route</button>
+  <button id="camMode">Kamera: hinter Rad</button>
+  <label id="spd">Tempo <input id="speed" type="range" min="1" max="10" step="1" value="3"></label>
+  <button id="shot">Screenshot 4K</button>
+  <button id="shot8">Screenshot 8K</button>
+</div>
+<div id="labels"></div>
+<div id="hud" style="display:none"></div>
+<div id="fps">– fps</div>
+<div id="stats" style="display:none">
+  <div class="st"><span>Steigung</span><b id="sGrade">0,0 %</b></div>
+  <div class="st"><span>Geschwindigkeit</span><b id="sSpeed">0,0 km/h</b></div>
+  <div class="st"><span>Leistung</span><b id="sPower">0 W</b></div>
+  <div class="st"><span>Höhe</span><b id="sAlt">0 m</b></div>
+  <canvas id="prof" width="236" height="64"></canvas>
+</div>
+<div id="info">Kolosseum, Rom · Ausschnitt 2 × 2 km · Gebäude, Straßen, Grünflächen © OpenStreetMap-Mitwirkende (ODbL)</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const S = window.SCENE;
+const [LAT0, LON0] = S.origin;
+const KX = 111320 * Math.cos(41.8902 * Math.PI / 180), KY = 110574;
+const ll = (lat, lon) => [(lon - LON0) * KX, (lat - LAT0) * KY];
+
+// deterministic random
+let seed = 12345;
+const rnd = () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+
+// ---------- renderer / scene ----------
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.NeutralToneMapping;
+renderer.toneMappingExposure = 1.0;
+document.body.appendChild(renderer.domElement);
+const ANISO = renderer.capabilities.getMaxAnisotropy();
+
+const scene = new THREE.Scene();
+const sky = document.createElement('canvas'); sky.width = 2; sky.height = 256;
+{ const g = sky.getContext('2d'), gr = g.createLinearGradient(0, 0, 0, 256);
+  gr.addColorStop(0, '#7fa7d1'); gr.addColorStop(0.55, '#bcd0e2'); gr.addColorStop(1, '#e4e6e2');
+  g.fillStyle = gr; g.fillRect(0, 0, 2, 256); }
+scene.background = new THREE.CanvasTexture(sky); scene.background.colorSpace = THREE.SRGBColorSpace;
+scene.fog = new THREE.Fog(0xdde3e6, 2200, 6500);
+
+const camera = new THREE.PerspectiveCamera(35, innerWidth / innerHeight, 3, 9000);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.maxPolarAngle = THREE.MathUtils.degToRad(86);
+controls.minDistance = 25; controls.maxDistance = 5000; controls.autoRotateSpeed = 0.6;
+
+scene.add(new THREE.HemisphereLight(0xe3edff, 0x8f8068, 1.25));
+const sun = new THREE.DirectionalLight(0xfff0da, 2.7);
+sun.position.set(-650, 900, 750);
+sun.castShadow = true;
+sun.shadow.bias = -0.0003;
+scene.add(sun, sun.target);
+// Shadows: the city is static, so the overview shadow map is rendered once (8K over the whole 2.3 km).
+// During the ride a 4K map over ±220 m follows the rider (≈11 cm per texel) and is snapped to the
+// texel grid so the shadow edges do not shimmer while moving.
+renderer.shadowMap.autoUpdate = false;
+const SUN_DIR = sun.position.clone().normalize();
+const L_F = SUN_DIR.clone().negate(), L_R = new THREE.Vector3().crossVectors(L_F, new THREE.Vector3(0, 1, 0)).normalize(), L_U = new THREE.Vector3().crossVectors(L_R, L_F);
+const SHADOW = {
+  overview: { size: Math.min(8192, renderer.capabilities.maxTextureSize), half: 1150, dist: 1600, depth: 1600, normalBias: 0.5 },
+  ride: { size: 4096, half: 220, dist: 900, depth: 450, normalBias: 0.08 },
+};
+let shadowMode = null;
+function setShadow(mode, center = new THREE.Vector3()) {
+  const m = SHADOW[mode], cam = sun.shadow.camera;
+  if (shadowMode !== mode) {
+    if (sun.shadow.mapSize.x !== m.size) { sun.shadow.map?.dispose(); sun.shadow.map = null; sun.shadow.mapSize.set(m.size, m.size); }
+    Object.assign(cam, { left: -m.half, right: m.half, top: m.half, bottom: -m.half, near: m.dist - m.depth, far: m.dist + m.depth });
+    cam.updateProjectionMatrix(); sun.shadow.normalBias = m.normalBias; shadowMode = mode;
+  }
+  const texel = 2 * m.half / m.size, c = center.clone();
+  const a = c.dot(L_R), b = c.dot(L_U);
+  c.addScaledVector(L_R, Math.round(a / texel) * texel - a).addScaledVector(L_U, Math.round(b / texel) * texel - b);
+  sun.target.position.copy(c); sun.position.copy(c).addScaledVector(SUN_DIR, m.dist);
+  sun.target.updateMatrixWorld(); sun.updateMatrixWorld();
+  renderer.shadowMap.needsUpdate = true;
+}
+setShadow('overview');
+
+// ---------- textures ----------
+function tex(w, h, draw) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = ANISO; t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+function speckle(g, w, h, n, a) {
+  for (let i = 0; i < n; i++) {
+    g.fillStyle = rnd() < 0.5 ? `rgba(0,0,0,${a * rnd()})` : `rgba(255,255,255,${a * rnd()})`;
+    g.fillRect(rnd() * w, rnd() * h, 1 + rnd() * 3, 1 + rnd() * 3);
+  }
+}
+
+// residential facade: 4 x 4 window bays (3.4 m x 3.5 m each)
+const winTex = tex(512, 512, (g, w, h) => {
+  g.fillStyle = '#fff'; g.fillRect(0, 0, w, h); speckle(g, w, h, 5000, 0.07);
+  for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) {
+    const x = c * 128, y = r * 128;
+    g.fillStyle = 'rgba(0,0,0,.10)'; g.fillRect(x, y + 123, 128, 5);
+    g.fillStyle = 'rgba(0,0,0,.16)'; g.fillRect(x + 35, y + 20, 58, 88);
+    const t = rnd();
+    if (t < 0.42) {
+      g.fillStyle = ['#43573e', '#5a4632', '#58615a', '#3c4d3a'][Math.floor(rnd() * 4)];
+      g.fillRect(x + 40, y + 25, 48, 78);
+      g.fillStyle = 'rgba(0,0,0,.28)';
+      for (let s = y + 28; s < y + 101; s += 5) g.fillRect(x + 40, s, 48, 1.5);
+      g.fillRect(x + 63, y + 25, 2, 78);
+    } else {
+      g.fillStyle = '#1e2730'; g.fillRect(x + 40, y + 25, 48, 78);
+      g.fillStyle = 'rgba(160,185,205,.35)'; g.fillRect(x + 42, y + 27, 20, 35);
+      g.fillStyle = '#d8d4cc'; g.fillRect(x + 63, y + 25, 2, 78); g.fillRect(x + 40, y + 60, 48, 2);
+      if (t < 0.8) { g.fillStyle = '#44583f'; g.fillRect(x + 27, y + 25, 12, 78); g.fillRect(x + 89, y + 25, 12, 78); }
+    }
+    g.fillStyle = 'rgba(0,0,0,.3)'; g.fillRect(x + 33, y + 104, 62, 4);
+    if (rnd() < 0.18) { g.fillStyle = 'rgba(30,30,30,.75)'; g.fillRect(x + 30, y + 92, 68, 3); for (let s = x + 31; s < x + 98; s += 5) g.fillRect(s, y + 92, 1.5, 14); }
+  }
+});
+// ground floor: shops / portals, 4 x 4.5 m, 4.2 m high
+const shopTex = tex(512, 128, (g, w, h) => {
+  g.fillStyle = '#fff'; g.fillRect(0, 0, w, h); speckle(g, w, h, 1500, 0.08);
+  g.fillStyle = 'rgba(0,0,0,.18)'; g.fillRect(0, 0, w, 6);
+  for (let c = 0; c < 4; c++) {
+    const x = c * 128, t = rnd();
+    g.fillStyle = 'rgba(0,0,0,.14)'; g.fillRect(x + 18, 22, 92, 106);
+    g.fillStyle = t < 0.5 ? '#2a2723' : t < 0.8 ? '#3b2f26' : '#4a4f52';
+    g.beginPath(); g.moveTo(x + 24, 128); g.lineTo(x + 24, 52); g.arc(x + 64, 52, 40, Math.PI, 2 * Math.PI); g.lineTo(x + 104, 128); g.fill();
+    if (t < 0.5) { g.fillStyle = 'rgba(190,200,205,.25)'; g.fillRect(x + 30, 60, 30, 60); }
+    if (t > 0.85) { g.fillStyle = ['#7d2f27', '#2f4d3d', '#3a3f5c'][c % 3]; g.fillRect(x + 14, 26, 100, 10); }
+  }
+  g.fillStyle = 'rgba(0,0,0,.22)'; g.fillRect(0, h - 10, w, 10);
+});
+// ancient masonry: brick + travertine blocks, 6 x 6 m
+const stoneTex = tex(256, 256, (g, w, h) => {
+  g.fillStyle = '#fff'; g.fillRect(0, 0, w, h);
+  for (let y = 0; y < h; y += 6) for (let x = (y / 6) % 2 * 9; x < w; x += 18) {
+    g.fillStyle = `rgba(${rnd() < .5 ? '0,0,0' : '255,255,255'},${0.04 + rnd() * 0.1})`; g.fillRect(x, y, 17, 5);
+  }
+  g.fillStyle = 'rgba(0,0,0,.12)'; for (let y = 0; y < h; y += 6) g.fillRect(0, y + 5, w, 1);
+  for (let i = 0; i < 25; i++) { g.fillStyle = `rgba(0,0,0,${0.05 + rnd() * 0.12})`; g.beginPath(); g.ellipse(rnd() * w, rnd() * h, 6 + rnd() * 30, 4 + rnd() * 16, 0, 0, 7); g.fill(); }
+  speckle(g, w, h, 3000, 0.1);
+});
+// monumental facade (churches, palazzi): 8 x 16 m tile
+const monoTex = tex(256, 512, (g, w, h) => {
+  g.fillStyle = '#fff'; g.fillRect(0, 0, w, h); speckle(g, w, h, 3000, 0.05);
+  g.fillStyle = 'rgba(0,0,0,.10)'; g.fillRect(0, 0, 20, h); g.fillRect(236, 0, 20, h);
+  g.fillStyle = 'rgba(0,0,0,.14)'; g.fillRect(0, 250, w, 10); g.fillRect(0, 0, w, 8);
+  for (const y0 of [60, 310]) {
+    g.fillStyle = 'rgba(0,0,0,.16)'; g.fillRect(82, y0 - 8, 92, 160);
+    g.fillStyle = '#24282c'; g.beginPath(); g.moveTo(90, y0 + 145); g.lineTo(90, y0 + 38); g.arc(128, y0 + 38, 38, Math.PI, 2 * Math.PI); g.lineTo(166, y0 + 145); g.fill();
+    g.fillStyle = 'rgba(0,0,0,.3)'; g.fillRect(80, y0 + 148, 96, 5);
+  }
+});
+// Colosseum arcade: one bay (7 m wide) over the full 48.5 m height
+const colTex = tex(256, 1024, (g, w, h) => {
+  const Y = m => h - m * h / 48.5, X = m => m * w / 7;
+  g.fillStyle = '#ddd0b2'; g.fillRect(0, 0, w, h);
+  for (let m = 0; m < 48.5; m += 0.62) { g.fillStyle = 'rgba(0,0,0,.05)'; g.fillRect(0, Y(m), w, 1.2); }
+  for (let i = 0; i < 70; i++) { g.fillStyle = `rgba(70,60,45,${0.04 + rnd() * 0.12})`; g.beginPath(); g.ellipse(rnd() * w, rnd() * h, 4 + rnd() * 26, 6 + rnd() * 50, 0, 0, 7); g.fill(); }
+  speckle(g, w, h, 9000, 0.12);
+  const tiers = [[0, 10.5], [10.5, 22.3], [22.3, 33.4]];
+  for (const [b, t] of tiers) {
+    const ob = b === 0 ? 0 : b + 1.5, ot = t - 2.0, r = 2.1, cx = 3.5;
+    if (b > 0) { g.fillStyle = 'rgba(0,0,0,.08)'; g.fillRect(0, Y(ob), w, Y(b) - Y(ob)); }
+    g.fillStyle = 'rgba(0,0,0,.10)'; g.fillRect(X(cx - r - .45), Y(ot), X(2 * r + .9), Y(ob) - Y(ot));
+    g.beginPath(); g.arc(X(cx), Y(ot - r), X(r + .45), Math.PI, 2 * Math.PI); g.fill();
+    const gr = g.createLinearGradient(0, Y(ot), 0, Y(ob)); gr.addColorStop(0, '#2c241d'); gr.addColorStop(1, '#5a4b3c');
+    g.fillStyle = gr; g.beginPath(); g.moveTo(X(cx - r), Y(ob)); g.lineTo(X(cx - r), Y(ot - r));
+    g.arc(X(cx), Y(ot - r), X(r), Math.PI, 2 * Math.PI); g.lineTo(X(cx + r), Y(ob)); g.fill();
+    g.fillStyle = 'rgba(255,255,255,.22)'; g.fillRect(0, Y(t), X(.55), Y(b) - Y(t)); g.fillRect(X(6.45), Y(t), X(.55), Y(b) - Y(t));
+    g.fillStyle = 'rgba(0,0,0,.16)'; g.fillRect(X(.55), Y(t), 3, Y(b) - Y(t));
+    g.fillStyle = 'rgba(0,0,0,.18)'; g.fillRect(0, Y(t), w, Y(t - 1.5) - Y(t));
+    g.fillStyle = 'rgba(255,255,255,.3)'; g.fillRect(0, Y(t) + 1, w, 3);
+  }
+  g.fillStyle = 'rgba(255,255,255,.18)'; g.fillRect(0, Y(48.5), X(.5), Y(33.4) - Y(48.5)); g.fillRect(X(6.5), Y(48.5), X(.5), Y(33.4) - Y(48.5));
+  g.fillStyle = '#2f271f'; g.fillRect(X(2.9), Y(40.5), X(1.2), Y(38.3) - Y(40.5));
+  g.fillStyle = 'rgba(0,0,0,.25)'; for (const cx of [1.8, 5.2]) g.fillRect(X(cx), Y(44.6), X(.4), Y(44) - Y(44.6));
+  g.fillStyle = 'rgba(0,0,0,.2)'; g.fillRect(0, Y(48.5), w, Y(47) - Y(48.5));
+});
+colTex.wrapT = THREE.ClampToEdgeWrapping;
+
+const mat = (map, extra = {}) => new THREE.MeshStandardMaterial({ map, vertexColors: true, roughness: 0.92, metalness: 0, side: THREE.DoubleSide, ...extra });
+const lam = (map, extra = {}) => new THREE.MeshLambertMaterial({ map, vertexColors: true, side: THREE.DoubleSide, ...extra });
+const MAT = { win: lam(winTex), shop: lam(shopTex), stone: lam(stoneTex), mono: lam(monoTex), col: lam(colTex),
+  flat: lam(null), road: lam(null, { polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 }) };
+
+// ---------- geometry builder ----------
+class Geo {
+  constructor() { this.p = []; this.uv = []; this.c = []; }
+  tri(a, b, c, ua, ub, uc, k) {
+    this.p.push(a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2]);
+    this.uv.push(ua[0], ua[1], ub[0], ub[1], uc[0], uc[1]);
+    for (let i = 0; i < 3; i++) this.c.push(k.r, k.g, k.b);
+  }
+  quad(a, b, c, d, ua, ub, uc, ud, k) { this.tri(a, b, c, ua, ub, uc, k); this.tri(a, c, d, ua, uc, ud, k); }
+  mesh(material, cast = true) {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(this.p, 3));
+    g.setAttribute('uv', new THREE.Float32BufferAttribute(this.uv, 2));
+    g.setAttribute('color', new THREE.Float32BufferAttribute(this.c, 3));
+    g.computeVertexNormals();
+    const m = new THREE.Mesh(g, material); m.castShadow = cast; m.receiveShadow = true;
+    return m;
+  }
+}
+const Z = [0, 0];
+const C = (s, j = 0) => { const c = new THREE.Color(s); return j ? c.multiplyScalar(1 - j / 2 + rnd() * j) : c; };
+function parseColor(s, fb) {
+  const c = new THREE.Color(fb);
+  if (!s) return c;
+  if (/^#([0-9a-f]{3}){1,2}$/i.test(s)) return c.setStyle(s);
+  const n = THREE.Color.NAMES[s.replace(/[\s_-]/g, '')];
+  if (n !== undefined) c.setHex(n);
+  return c;
+}
+const pts2 = a => { const r = []; for (let i = 0; i < a.length; i += 2) r.push(new THREE.Vector2(a[i], a[i + 1])); return r; };
+// data metres (east, north) -> three (x, up, -north)
+const P3 = (x, y, h) => [x, h, -y];
+// terrain: smoothed SRTM heightmap (data/terrain.py), metres above sea level; render heights are relative to the Colosseum
+const TR = S.terrain, TN = TR.n;
+const HD = new Int16Array(Uint8Array.from(atob(TR.dm), c => c.charCodeAt(0)).buffer);
+function asl(x, y) {
+  const fx = THREE.MathUtils.clamp((x + TR.half) / TR.step, 0, TN - 1.001), fy = THREE.MathUtils.clamp((y + TR.half) / TR.step, 0, TN - 1.001);
+  const j = Math.floor(fx), i = Math.floor(fy), a = fx - j, b = fy - i, at = (ii, jj) => HD[ii * TN + jj] / 10;
+  return (at(i, j) * (1 - a) + at(i, j + 1) * a) * (1 - b) + (at(i + 1, j) * (1 - a) + at(i + 1, j + 1) * a) * b;
+}
+let HEDGE = 0; for (let q = 0; q < TN; q++) HEDGE += (HD[q] + HD[(TN - 1) * TN + q] + HD[q * TN] + HD[q * TN + TN - 1]) / 40 / TN;
+const BASE = asl(0, 0);
+const gh = (x, y) => {                                           // render height; fades to the edge level at the border
+  const w = THREE.MathUtils.smoothstep(Math.max(Math.abs(x), Math.abs(y)), TR.half - 150, TR.half - 10);
+  return asl(x, y) * (1 - w) + HEDGE * w - BASE;
+};
+
+// Vittoriano frame: origin = centre of the front base line, X along the facade, D (local z) towards the back
+const VIT = { x: -789, y: 522, rot: 0.305 };
+const vitLocal = (x, y) => { const dx = x - VIT.x, dy = y - VIT.y, c = Math.cos(VIT.rot), s = Math.sin(VIT.rot); return [dx * c + dy * s, dx * s - dy * c]; };
+// closed prism in data coords (merlons, towers)
+function prism(geo, pts, zb, zt, k, du = 8, dv = 16) {
+  let u = 0;
+  for (let i = 0; i < pts.length; i++) {
+    const [ax, ay] = pts[i], [bx, by] = pts[(i + 1) % pts.length], len = Math.hypot(bx - ax, by - ay);
+    geo.quad(P3(ax, ay, zb), P3(bx, by, zb), P3(bx, by, zt), P3(ax, ay, zt), [u / du, zb / dv], [(u + len) / du, zb / dv], [(u + len) / du, zt / dv], [u / du, zt / dv], k);
+    u += len;
+  }
+  for (let i = 1; i < pts.length - 1; i++) geo.tri(P3(...pts[0], zt), P3(...pts[i], zt), P3(...pts[i + 1], zt), Z, Z, Z, k);
+}
+function merlons(geo, ring, z, k, step = 2.6) {
+  for (let i = 0; i < ring.length; i++) {
+    const a = ring[i], b = ring[(i + 1) % ring.length], len = a.distanceTo(b); if (len < 3) continue;
+    const ex = (b.x - a.x) / len, ey = (b.y - a.y) / len;
+    for (let s = 1; s + 0.6 < len; s += step) {
+      const x = a.x + ex * s, y = a.y + ey * s;
+      prism(geo, [[x - ex * .6 - ey * .4, y - ey * .6 + ex * .4], [x + ex * .6 - ey * .4, y + ey * .6 + ex * .4], [x + ex * .6 + ey * .4, y + ey * .6 - ex * .4], [x - ex * .6 + ey * .4, y - ey * .6 - ex * .4]], z, z + 1.6, k);
+    }
+  }
+}
+
+// spatial tiles: camera and shadow camera only draw the tiles they actually see
+const TILE_M = 250;
+class Tiled {
+  constructor() { this.t = new Map(); }
+  at(x, y) { const k = Math.floor(x / TILE_M) + ',' + Math.floor(y / TILE_M); let g = this.t.get(k); if (!g) this.t.set(k, g = new Geo()); return g; }
+  add(material, cast = true) { for (const g of this.t.values()) scene.add(g.mesh(material, cast)); }
+}
+
+// ---------- buildings ----------
+const G = { win: new Tiled(), shop: new Tiled(), stone: new Tiled(), mono: new Tiled(), roof: new Tiled() };
+const TILE = { win: [13.6, 14], stone: [6, 6], mono: [8, 16] };
+function walls(geo, ring, zb, zt, du, dv, voff, k) {
+  let u = 0;
+  for (let i = 0; i < ring.length; i++) {
+    const a = ring[i], b = ring[(i + 1) % ring.length], len = a.distanceTo(b);
+    const u0 = u / du, u1 = (u + len) / du, v0 = (zb - voff) / dv, v1 = (zt - voff) / dv;
+    geo.quad(P3(a.x, a.y, zb), P3(b.x, b.y, zb), P3(b.x, b.y, zt), P3(a.x, a.y, zt), [u0, v0], [u1, v0], [u1, v1], [u0, v1], k);
+    u += len;
+  }
+}
+for (const b of S.buildings) {
+  if (b.o.length < 6) continue;
+  const outer = pts2(b.o), holes = b.h.filter(h => h.length >= 6).map(pts2);
+  const rings = [outer, ...holes];
+  const cx = outer.reduce((s, p) => s + p.x, 0) / outer.length, cy = outer.reduce((s, p) => s + p.y, 0) / outer.length;
+  const [vx, vd] = vitLocal(cx, cy);
+  if (Math.abs(vx) < 60 && vd > -40 && vd < 100) continue;      // replaced by the detailed Vittoriano model
+  if (b.n === 'Arco di Costantino') continue;                    // replaced by the detailed arch model
+  const pv = b.n === 'Palazzo Venezia', T = kind => G[kind].at(cx, cy);
+  const k = pv ? C('#c9b48e') : parseColor(b.c, '#d9a066').multiplyScalar(0.94 + rnd() * 0.1);
+  const hc = gh(cx, cy), hb = Math.min(...outer.map(p => gh(p.x, p.y)));
+  const zt = hc + (pv ? 27 : Math.max(b.z, b.m + 1)), zb = b.m > 0 ? hc + b.m : hb - 2;
+  const kind = pv ? 'mono' : b.k === 1 ? 'stone' : b.k === 2 ? 'mono' : 'win';
+  if (pv) {                                                      // Guelph merlons + corner tower on Piazza Venezia
+    merlons(T('mono'), outer, zt, k);
+    const i = outer.reduce((m, p, j) => p.x - p.y > outer[m].x - outer[m].y ? j : m, 0);
+    const P = outer[i], A = outer[(i + outer.length - 1) % outer.length], B = outer[(i + 1) % outer.length];
+    const e1 = A.clone().sub(P).normalize().multiplyScalar(12), e2 = B.clone().sub(P).normalize().multiplyScalar(12);
+    const tw = [P, P.clone().add(e1), P.clone().add(e1).add(e2), P.clone().add(e2)];
+    prism(T('mono'), tw.map(p => [p.x, p.y]), hb - 2, hc + 40, k);
+    merlons(T('mono'), tw, hc + 40, k, 2.2);
+  }
+  const [du, dv] = TILE[kind];
+  for (const r of rings) {
+    if (kind === 'win' && b.m === 0 && zt - hc > 8) {
+      walls(T('shop'), r, zb, hc + 4.2, 18, 4.2, hc, k);
+      walls(T('win'), r, hc + 4.2, zt, du, dv, hc + 4.2, k);
+    } else walls(T(kind), r, zb, zt, du, dv, hc, k);
+  }
+  let tris;
+  try { tris = THREE.ShapeUtils.triangulateShape(outer, holes); } catch { continue; }
+  const all = outer.concat(...holes), rk = parseColor(b.r, '#b5583a');
+  for (const [i, j, l] of tris) {
+    const A = all[i], B = all[j], D = all[l];
+    T('roof').tri(P3(A.x, A.y, zt), P3(B.x, B.y, zt), P3(D.x, D.y, zt), Z, Z, Z, rk);
+  }
+}
+G.win.add(MAT.win); G.shop.add(MAT.shop); G.stone.add(MAT.stone); G.mono.add(MAT.mono); G.roof.add(MAT.flat);
+
+// ---------- ground, green areas, trees ----------
+const LAND = document.createElement('canvas'); LAND.width = LAND.height = 4096;
+const lg = LAND.getContext('2d'), LX = x => (x + TR.half) / (2 * TR.half) * 4096, LY = y => (TR.half - y) / (2 * TR.half) * 4096;
+lg.fillStyle = '#cfc4aa'; lg.fillRect(0, 0, 4096, 4096); speckle(lg, 4096, 4096, 60000, 0.05);
+{
+  const tg = new THREE.PlaneGeometry(2 * TR.half, 2 * TR.half, TN - 1, TN - 1).rotateX(-Math.PI / 2), pos = tg.attributes.position;
+  for (let i = 0; i < pos.count; i++) pos.setY(i, gh(pos.getX(i), -pos.getZ(i)));
+  tg.computeVertexNormals();
+  const landTex = new THREE.CanvasTexture(LAND); landTex.colorSpace = THREE.SRGBColorSpace; landTex.anisotropy = ANISO;
+  const terrain = new THREE.Mesh(tg, new THREE.MeshLambertMaterial({ map: landTex }));
+  terrain.receiveShadow = true; scene.add(terrain);
+  window.__landTex = landTex;
+  const outer = new THREE.Shape([[-9000, -9000], [9000, -9000], [9000, 9000], [-9000, 9000]].map(([x, y]) => new THREE.Vector2(x, y)));
+  outer.holes.push(new THREE.Path([[-TR.half, -TR.half], [-TR.half, TR.half], [TR.half, TR.half], [TR.half, -TR.half]].map(([x, y]) => new THREE.Vector2(x, y))));
+  const far = new THREE.Mesh(new THREE.ShapeGeometry(outer).rotateX(-Math.PI / 2), new THREE.MeshLambertMaterial({ color: 0xcfc4aa }));
+  far.position.y = HEDGE - BASE; far.receiveShadow = true; scene.add(far);
+}
+
+const AREA = [{ c: '#86a75c', d: 1 / 170 }, { c: '#c4b78e', d: 1 / 650 }, { c: '#5e8946', d: 1 / 75 }];
+const trees = [];
+// keep trees off roads: grid of road segments, reject points closer than half road width + 3 m
+const RG = new Map(), CELL = 25, cellKey = (i, j) => i * 100000 + j;
+for (const r of S.roads) for (let i = 0; i < r.p.length - 2; i += 2) {
+  const seg = [r.p[i], r.p[i + 1], r.p[i + 2], r.p[i + 3], r.w / 2 + 3];
+  for (let gx = Math.floor((Math.min(seg[0], seg[2]) - seg[4]) / CELL); gx <= Math.floor((Math.max(seg[0], seg[2]) + seg[4]) / CELL); gx++)
+    for (let gy = Math.floor((Math.min(seg[1], seg[3]) - seg[4]) / CELL); gy <= Math.floor((Math.max(seg[1], seg[3]) + seg[4]) / CELL); gy++) {
+      const k = cellKey(gx, gy); if (!RG.has(k)) RG.set(k, []); RG.get(k).push(seg);
+    }
+}
+const onRoad = (x, y) => (RG.get(cellKey(Math.floor(x / CELL), Math.floor(y / CELL))) || []).some(([ax, ay, bx, by, r]) => {
+  const dx = bx - ax, dy = by - ay, t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / (dx * dx + dy * dy || 1)));
+  return Math.hypot(x - ax - t * dx, y - ay - t * dy) < r;
+});
+const colU = Math.cos(S.colosseum.angle), colV = Math.sin(S.colosseum.angle);
+const inCol = (x, y) => { const u = x * colU + y * colV, v = -x * colV + y * colU; return (u / 124) ** 2 + (v / 108) ** 2 < 1; };
+// paint land use onto the terrain texture (archaeological ground first, then parks and woods)
+for (const t of [1, 0, 2]) for (const a of S.areas) {
+  if (a.t !== t || a.o.length < 6) continue;
+  lg.fillStyle = '#' + C(AREA[t].c, 0.12).getHexString(THREE.SRGBColorSpace); lg.beginPath();
+  for (const ring of [a.o, ...a.h]) { for (let i = 0; i < ring.length; i += 2) lg[i ? 'lineTo' : 'moveTo'](LX(ring[i]), LY(ring[i + 1])); lg.closePath(); }
+  lg.fill('evenodd');
+}
+window.__landTex.needsUpdate = true;
+for (const a of S.areas) {
+  if (a.o.length < 6) continue;
+  const outer = pts2(a.o), holes = a.h.filter(h => h.length >= 6).map(pts2), st = AREA[a.t];
+  let tris; try { tris = THREE.ShapeUtils.triangulateShape(outer, holes); } catch { continue; }
+  const all = outer.concat(...holes);
+  for (const [i, j, l] of tris) {
+    const A = all[i], B = all[j], D = all[l];
+    const area = Math.abs((B.x - A.x) * (D.y - A.y) - (D.x - A.x) * (B.y - A.y)) / 2;
+    let n = area * st.d; n = Math.floor(n) + (rnd() < n % 1 ? 1 : 0);
+    for (let q = 0; q < n && trees.length < 30000; q++) {
+      let r1 = rnd(), r2 = rnd(); if (r1 + r2 > 1) { r1 = 1 - r1; r2 = 1 - r2; }
+      const x = A.x + r1 * (B.x - A.x) + r2 * (D.x - A.x), y = A.y + r1 * (B.y - A.y) + r2 * (D.y - A.y);
+      if (Math.abs(x) < 1080 && Math.abs(y) < 1080 && !inCol(x, y) && !onRoad(x, y)) trees.push([x, y]);
+    }
+  }
+}
+{
+  const crown = new THREE.IcosahedronGeometry(1, 1), trunk = new THREE.CylinderGeometry(0.22, 0.34, 1, 6).translate(0, 0.5, 0);
+  const crownMat = new THREE.MeshLambertMaterial(), trunkMat = new THREE.MeshLambertMaterial({ color: 0x5b4636 });
+  const byTile = new Map();
+  for (const t of trees) { const k = Math.floor(t[0] / TILE_M) + ',' + Math.floor(t[1] / TILE_M); if (!byTile.has(k)) byTile.set(k, []); byTile.get(k).push(t); }
+  const o = new THREE.Object3D(), col = new THREE.Color();
+  for (const list of byTile.values()) {
+    const cm = new THREE.InstancedMesh(crown, crownMat, list.length), tm = new THREE.InstancedMesh(trunk, trunkMat, list.length);
+    list.forEach(([x, y], i) => {
+      const pine = rnd() < 0.32;                                 // Roman umbrella pines
+      const r = pine ? 4.5 + rnd() * 3 : 2.6 + rnd() * 2.4, th = pine ? 9 + rnd() * 6 : 2.5 + rnd() * 2, sy = pine ? 0.42 : 1.05;
+      const g0 = gh(x, y) - 0.3;
+      o.position.set(x, g0, -y); o.rotation.set(0, rnd() * 6.3, 0); o.scale.set(1, th + r * sy * 0.5, 1); o.updateMatrix(); tm.setMatrixAt(i, o.matrix);
+      o.position.set(x, g0 + th + r * sy * 0.6, -y); o.scale.set(r, r * sy, r * (0.85 + rnd() * 0.3)); o.updateMatrix(); cm.setMatrixAt(i, o.matrix);
+      cm.setColorAt(i, col.setHSL(pine ? 0.25 : 0.2 + rnd() * 0.09, 0.38 + rnd() * 0.2, pine ? 0.22 + rnd() * 0.06 : 0.26 + rnd() * 0.1));
+    });
+    cm.computeBoundingSphere(); tm.computeBoundingSphere();
+    cm.castShadow = tm.castShadow = true; cm.receiveShadow = true;
+    scene.add(cm, tm);
+  }
+}
+
+// ---------- roads ----------
+const roadGeo = new Tiled();
+const ROAD = [C('#625f5a'), C('#c2b59a')];
+for (const r of S.roads) {
+  const hw = r.w / 2, lift = r.s ? 0.36 : 0.3, k = ROAD[r.s], q = [];
+  for (let i = 0; i < r.p.length - 2; i += 2) {                 // densify to ≤ 6 m so the ribbon follows the terrain
+    const x0 = r.p[i], y0 = r.p[i + 1], x1 = r.p[i + 2], y1 = r.p[i + 3], n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0) / 6));
+    for (let s = 0; s < n; s++) q.push([x0 + (x1 - x0) * s / n, y0 + (y1 - y0) * s / n, s === 0]);
+  }
+  q.push([r.p[r.p.length - 2], r.p[r.p.length - 1], true]);
+  const H = (x, y) => P3(x, y, gh(x, y) + lift);
+  for (let i = 0; i < q.length - 1; i++) {
+    const [x0, y0, corner] = q[i], [x1, y1] = q[i + 1];
+    const L = Math.hypot(x1 - x0, y1 - y0); if (L < 0.01) continue;
+    const nx = -(y1 - y0) / L * hw, ny = (x1 - x0) / L * hw;
+    const rg = roadGeo.at(x0, y0);
+    rg.quad(H(x0 + nx, y0 + ny), H(x0 - nx, y0 - ny), H(x1 - nx, y1 - ny), H(x1 + nx, y1 + ny), Z, Z, Z, Z, k);
+    if (i > 0 && corner) for (let s = 0; s < 8; s++) {          // round joint at original vertices
+      const a0 = s / 8 * 6.2832, a1 = (s + 1) / 8 * 6.2832;
+      rg.tri(H(x0, y0), H(x0 + Math.cos(a0) * hw, y0 + Math.sin(a0) * hw), H(x0 + Math.cos(a1) * hw, y0 + Math.sin(a1) * hw), Z, Z, Z, k);
+    }
+  }
+}
+roadGeo.add(MAT.road, false);
+
+// ---------- Colosseum (procedural, local axes: u = major axis, v = minor axis) ----------
+const colosseum = new THREE.Group();
+colosseum.rotation.y = S.colosseum.angle;
+const arc = new Geo(), stone = new Geo();
+const WHITE = new THREE.Color(1, 1, 1), BRICK = C('#c4815a');
+const N = 160, BAYS = 80;
+const E = (a, b, th, y) => [a * Math.cos(th), y, -b * Math.sin(th)];
+
+function ellWall(geo, a, b, t, H, { base = 0, plain = false, col = () => WHITE } = {}) {
+  const per = Math.PI * (3 * (a + b) - Math.sqrt((3 * a + b) * (a + 3 * b)));
+  for (let i = 0; i < N; i++) {
+    const h = H[i]; if (h <= base + 0.2) continue;
+    const t0 = i / N * 2 * Math.PI, t1 = (i + 1) / N * 2 * Math.PI, k = col(i);
+    const u0 = plain ? i * per / N / 6 : i * BAYS / N, u1 = plain ? (i + 1) * per / N / 6 : (i + 1) * BAYS / N;
+    const V = y => plain ? y / 6 : y / 48.5, v0 = V(base), v1 = V(h);
+    for (const s of [0, t]) geo.quad(E(a - s, b - s, t0, base), E(a - s, b - s, t1, base), E(a - s, b - s, t1, h), E(a - s, b - s, t0, h), [u0, v0], [u1, v0], [u1, v1], [u0, v1], k);
+    geo.quad(E(a, b, t0, h), E(a, b, t1, h), E(a - t, b - t, t1, h), E(a - t, b - t, t0, h), [u0, v1], [u1, v1], [u1, v1 - 0.01], [u0, v1 - 0.01], k);
+    for (const [th, hn] of [[t0, H[(i + N - 1) % N]], [t1, H[(i + 1) % N]]]) {
+      const lo = Math.max(base, hn); if (lo >= h) continue;
+      geo.quad(E(a, b, th, lo), E(a - t, b - t, th, lo), E(a - t, b - t, th, h), E(a, b, th, h), [u0, V(lo)], [u0 + 0.1, V(lo)], [u0 + 0.1, v1], [u0, v1], k);
+    }
+  }
+}
+const mid = i => (i + 0.5) / N * 2 * Math.PI;
+const intact = i => Math.sin(mid(i)) > -0.12;                   // north side keeps the full outer wall
+const gap = i => { let d = 0; while (!intact((i + d) % N) && !intact((i - d + N) % N) && d < N) d++; return d; };
+// outer ring (4 storeys), south side collapsed; brick buttresses at both break ends
+const H0 = [], buttress = new Set();
+for (let i = 0; i < N; i++) {
+  if (intact(i)) { H0.push(48.5); continue; }
+  const d = gap(i);
+  if (d <= 3) { H0.push([0, 40, 28, 15][d]); buttress.add(i); } else H0.push(0.6 + rnd() * 1.6);
+}
+ellWall(arc, 94, 78, 2.6, H0, { col: i => buttress.has(i) ? BRICK : WHITE });
+// second ring (visible arcade on the south), third ring
+ellWall(arc, 88, 72, 2.2, Array.from({ length: N }, (_, i) => intact(i) ? 33.4 : 29.5 + rnd() * 3.9));
+ellWall(stone, 81, 65, 2.0, Array.from({ length: N }, () => 24 + rnd() * 4.5), { plain: true, col: () => C('#c09a74', 0.15) });
+// vaulted ambulatories between the rings
+function annulus(geo, a1, b1, a0, b0, h, sel, k) {
+  for (let i = 0; i < N; i++) {
+    if (!sel(i)) continue;
+    const t0 = i / N * 2 * Math.PI, t1 = (i + 1) / N * 2 * Math.PI;
+    geo.quad(E(a1, b1, t0, h), E(a1, b1, t1, h), E(a0, b0, t1, h), E(a0, b0, t0, h), Z, Z, Z, Z, k);
+  }
+}
+annulus(stone, 88, 72, 81, 65, 23.5, () => true, C('#b48d6a'));
+annulus(stone, 94, 78, 88, 72, 30.5, intact, C('#b9946f'));
+annulus(stone, 94, 78, 88, 72, 4.5, i => !intact(i), C('#a98b6b'));
+// cavea: ruined, stepped seating terraces with radial brick walls
+const RING = 12, ca = t => 43.5 + 37.5 * t, cb = t => 26 + 39 * t, ch = t => 4.5 + 19.5 * t;
+const CAV = ['#b17c58', '#a26c4c', '#c49b75', '#9d8b72', '#b9a27e', '#a8805e'];
+let prev = new Array(N).fill(4.5);
+for (let j = 0; j < RING; j++) {
+  const s0 = j / RING, s1 = (j + 1) / RING, a0 = ca(s0), b0 = cb(s0), a1 = ca(s1), b1 = cb(s1);
+  const cur = Array.from({ length: N }, () => ch(s1) + (rnd() - 0.5) * (j < 2 ? 0.8 : 3.2));
+  for (let i = 0; i < N; i++) {
+    const t0 = i / N * 2 * Math.PI, t1 = (i + 1) / N * 2 * Math.PI, h = cur[i], k = C(CAV[Math.floor(rnd() * CAV.length)], 0.1);
+    const ua = t0 * a0 / 6, ub = t1 * a0 / 6;
+    stone.quad(E(a0, b0, t0, prev[i]), E(a0, b0, t1, prev[i]), E(a0, b0, t1, h), E(a0, b0, t0, h), [ua, prev[i] / 6], [ub, prev[i] / 6], [ub, h / 6], [ua, h / 6], k);
+    stone.quad(E(a0, b0, t0, h), E(a0, b0, t1, h), E(a1, b1, t1, h), E(a1, b1, t0, h), [ua, 0], [ub, 0], [ub, .6], [ua, .6], k);
+    const hn = cur[(i + 1) % N];
+    if (Math.abs(hn - h) > 0.3) stone.quad(E(a0, b0, t1, Math.min(h, hn)), E(a1, b1, t1, Math.min(h, hn)), E(a1, b1, t1, Math.max(h, hn)), E(a0, b0, t1, Math.max(h, hn)), [0, 0], [.6, 0], [.6, .3], [0, .3], k);
+    if (j >= 2 && i % 4 === 0) {                                // radial walls
+      const top = h + 1 + rnd() * 2.5;
+      stone.quad(E(a0, b0, t0, ch(s0) - 2), E(a1, b1, t0, ch(s1) - 2), E(a1, b1, t0, top), E(a0, b0, t0, top), [0, 0], [.6, 0], [.6, top / 6], [0, top / 6], BRICK);
+    }
+  }
+  prev = cur;
+}
+// arena: podium wall, exposed hypogeum, reconstructed wooden stage at the east end
+ellWall(stone, 43.5, 26, 1.0, new Array(N).fill(4.5), { base: -6, plain: true, col: () => C('#cdbb98') });
+{
+  const ell = []; for (let i = 0; i < 96; i++) { const th = i / 96 * 2 * Math.PI; ell.push(new THREE.Vector2(42.5 * Math.cos(th), 25 * Math.sin(th))); }
+  const k = C('#7a6550');
+  for (const [i, j, l] of THREE.ShapeUtils.triangulateShape(ell, []))
+    stone.tri([ell[i].x, -6, -ell[i].y], [ell[j].x, -6, -ell[j].y], [ell[l].x, -6, -ell[l].y], [ell[i].x / 6, ell[i].y / 6], [ell[j].x / 6, ell[j].y / 6], [ell[l].x / 6, ell[l].y / 6], k);
+  const box = (u0, u1, v0, v1, y0, y1, kk) => {
+    const c = [[u0, v0], [u1, v0], [u1, v1], [u0, v1]];
+    for (let q = 0; q < 4; q++) { const A = c[q], B = c[(q + 1) % 4]; stone.quad([A[0], y0, -A[1]], [B[0], y0, -B[1]], [B[0], y1, -B[1]], [A[0], y1, -A[1]], [0, 0], [1, 0], [1, 1], [0, 1], kk); }
+    stone.quad([u0, y1, -v0], [u1, y1, -v0], [u1, y1, -v1], [u0, y1, -v1], Z, Z, Z, Z, kk);
+  };
+  const wk = C('#a98767');
+  for (let v = -21; v <= 21; v += 3.0) {
+    if (Math.abs(v) < 1.5) continue;
+    const L = 42.5 * Math.sqrt(1 - (v / 25) ** 2) - 0.8; if (L < 2) continue;
+    box(-L, Math.min(L, 12), v - 0.45, v + 0.45, -6, -0.6 - rnd() * 1.5, wk);
+  }
+  for (let u = -36; u <= 10; u += 5.5) {
+    const L = 25 * Math.sqrt(1 - (u / 42.5) ** 2) - 0.8;
+    box(u - 0.45, u + 0.45, -L, -1.5, -6, -1 - rnd() * 1.5, wk); box(u - 0.45, u + 0.45, 1.5, L, -6, -1 - rnd() * 1.5, wk);
+  }
+  const plat = [new THREE.Vector2(12, -25 * Math.sqrt(1 - (12 / 42.5) ** 2))], tc = Math.acos(12 / 42.5);
+  for (let q = 0; q <= 30; q++) { const th = -tc + q / 30 * 2 * tc; plat.push(new THREE.Vector2(42.5 * Math.cos(th), 25 * Math.sin(th))); }
+  const pk = C('#a3825c');
+  for (const [i, j, l] of THREE.ShapeUtils.triangulateShape(plat, []))
+    stone.tri([plat[i].x, 0, -plat[i].y], [plat[j].x, 0, -plat[j].y], [plat[l].x, 0, -plat[l].y], Z, Z, Z, pk);
+  const ve = 25 * Math.sqrt(1 - (12 / 42.5) ** 2);
+  stone.quad([12, -6, ve], [12, -6, -ve], [12, 0, -ve], [12, 0, ve], Z, Z, Z, Z, C('#5e4836'));
+}
+colosseum.add(arc.mesh(MAT.col), stone.mesh(MAT.stone));
+scene.add(colosseum);
+
+// ---------- Vittoriano / Altare della Patria (local: x along facade, y up, z = D towards the back) ----------
+const marbleTex = tex(256, 256, (g, w, h) => {
+  g.fillStyle = '#fff'; g.fillRect(0, 0, w, h); speckle(g, w, h, 4000, 0.045);
+  g.fillStyle = 'rgba(0,0,0,.085)';
+  for (let y = 0; y < h; y += 32) { g.fillRect(0, y, w, 1.5); for (let x = (y / 32) % 2 * 32; x < w; x += 64) g.fillRect(x, y, 1.5, 32); }
+  for (let i = 0; i < 14; i++) { g.strokeStyle = `rgba(120,110,95,${0.05 + rnd() * 0.07})`; g.lineWidth = 1 + rnd() * 2; g.beginPath(); let x = rnd() * w, y = rnd() * h; g.moveTo(x, y); for (let q = 0; q < 6; q++) g.lineTo(x += (rnd() - .5) * 60, y += (rnd() - .5) * 60); g.stroke(); }
+});
+const vit = new THREE.Group();
+vit.position.set(VIT.x, gh(-805, 574), -VIT.y); vit.rotation.y = VIT.rot;
+const VM = new Geo(), VG = new Geo(), VB = new Geo(), VF = new Geo();     // marble, gilded bronze, dark bronze, flat colours
+const MARBLE = C('#f4f0e6'), MARBLE2 = C('#e9e3d5'), SHADE = C('#c9c1b0'), GOLD = C('#ffffff'), BRONZE = C('#ffffff');
+function box(g, x0, x1, y0, y1, z0, z1, k, s = 6) {
+  const f = (a, b, c, d, ua, ub, va, vb) => g.quad(a, b, c, d, [ua / s, va / s], [ub / s, va / s], [ub / s, vb / s], [ua / s, vb / s], k);
+  f([x0, y0, z0], [x1, y0, z0], [x1, y1, z0], [x0, y1, z0], x0, x1, y0, y1);
+  f([x1, y0, z1], [x0, y0, z1], [x0, y1, z1], [x1, y1, z1], x1, x0, y0, y1);
+  f([x0, y0, z1], [x0, y0, z0], [x0, y1, z0], [x0, y1, z1], z1, z0, y0, y1);
+  f([x1, y0, z0], [x1, y0, z1], [x1, y1, z1], [x1, y1, z0], z0, z1, y0, y1);
+  f([x0, y1, z0], [x1, y1, z0], [x1, y1, z1], [x0, y1, z1], x0, x1, z0, z1);
+}
+const boxC = (g, cx, cz, w, d, y0, y1, k) => box(g, cx - w / 2, cx + w / 2, y0, y1, cz - d / 2, cz + d / 2, k);
+function cyl(g, cx, cz, y0, y1, r0, r1, k, seg = 18) {
+  for (let i = 0; i < seg; i++) {
+    const a0 = i / seg * 6.2832, a1 = (i + 1) / seg * 6.2832, c0 = Math.cos(a0), s0 = Math.sin(a0), c1 = Math.cos(a1), s1 = Math.sin(a1);
+    g.quad([cx + c0 * r0, y0, cz + s0 * r0], [cx + c1 * r0, y0, cz + s1 * r0], [cx + c1 * r1, y1, cz + s1 * r1], [cx + c0 * r1, y1, cz + s0 * r1], [i / seg * 4, y0 / 6], [(i + 1) / seg * 4, y0 / 6], [(i + 1) / seg * 4, y1 / 6], [i / seg * 4, y1 / 6], k);
+    g.tri([cx, y1, cz], [cx + c0 * r1, y1, cz + s0 * r1], [cx + c1 * r1, y1, cz + s1 * r1], Z, Z, Z, k);
+  }
+}
+function ell(g, cx, cy, cz, rx, ry, rz, k, seg = 10) {
+  const p = (i, j) => { const th = i / seg * 6.2832, ph = j / (seg / 2) * Math.PI; return [cx + rx * Math.sin(ph) * Math.cos(th), cy + ry * Math.cos(ph), cz + rz * Math.sin(ph) * Math.sin(th)]; };
+  for (let i = 0; i < seg; i++) for (let j = 0; j < seg / 2; j++) g.quad(p(i, j), p(i + 1, j), p(i + 1, j + 1), p(i, j + 1), Z, Z, Z, Z, k);
+}
+function steps(g, x0, x1, z0, z1, y0, y1, k, rise = 0.42) {      // flight rising from z0 (y0) to z1 (y1)
+  const n = Math.max(1, Math.round((y1 - y0) / rise)), run = (z1 - z0) / n;
+  for (let i = 0; i < n; i++) box(g, x0, x1, y0, y0 + (i + 1) * (y1 - y0) / n, z0 + i * run, z1, k);
+}
+function horse(g, x, y, z, s, k) {                              // faces -z (towards the piazza)
+  ell(g, x, y + 5 * s, z, 1.25 * s, 1.5 * s, 3.2 * s, k);
+  ell(g, x, y + 7 * s, z - 3 * s, 0.8 * s, 1.9 * s, 1.0 * s, k);
+  ell(g, x, y + 8.5 * s, z - 4.2 * s, 0.6 * s, 0.7 * s, 1.4 * s, k);
+  for (const [lx, lz] of [[-.7, -2.2], [.7, -2.2], [-.7, 2.2], [.7, 2.2]]) boxC(g, x + lx * s, z + lz * s, 0.55 * s, 0.55 * s, y, y + 4.3 * s, k);
+  ell(g, x, y + 4.4 * s, z + 3.5 * s, 0.3 * s, 1.6 * s, 0.4 * s, k);
+}
+const figure = (g, x, y, z, h, k) => { ell(g, x, y + h * 0.42, z, h * 0.16, h * 0.42, h * 0.13, k, 8); ell(g, x, y + h * 0.91, z, h * 0.08, h * 0.09, h * 0.08, k, 8); };
+// massing: lower landing, middle terrace (+24 m), upper terrace (+40 m)
+box(VM, -58, -26, 0, 24, 0, 50, MARBLE); box(VM, 26, 58, 0, 24, 0, 50, MARBLE);
+box(VM, -26, 26, 0, 24, 8, 50, MARBLE);
+box(VM, -58, 58, 0, 40, 50, 118, MARBLE);
+box(VM, -26, 26, 0, 14, -12, 8, MARBLE2);
+for (const sx of [-1, 1]) {
+  box(VM, sx < 0 ? -58.6 : 26, sx < 0 ? -26 : 58.6, 22.2, 24.2, -0.6, 50, MARBLE2);   // cornice
+  box(VM, sx < 0 ? -58.6 : 26, sx < 0 ? -26 : 58.6, 7, 8.2, -0.6, 0, MARBLE2);
+  box(VM, sx < 0 ? -58 : 26, sx < 0 ? -26 : 58, 24, 25.2, 0, 0.6, MARBLE);            // balustrades
+  box(VM, sx < 0 ? -58 : 30, sx < 0 ? -30 : 58, 40, 41.2, 50, 50.6, MARBLE);
+  for (let x = 30; x < 57; x += 5) boxC(VF, sx * x, 50.05, 2.6, 0.1, 27, 37, SHADE);   // blind niches
+  // fountains of the Adriatic / Tyrrhenian sea at street level
+  box(VM, sx * 38, sx * 54, 0, 1.2, -8, 0, MARBLE2);
+  if (sx > 0) VF.quad([38.4, 1.05, -7.6], [53.6, 1.05, -7.6], [53.6, 1.05, -0.2], [38.4, 1.05, -0.2], Z, Z, Z, Z, C('#4f8fae'));
+  else VF.quad([-53.6, 1.05, -7.6], [-38.4, 1.05, -7.6], [-38.4, 1.05, -0.2], [-53.6, 1.05, -0.2], Z, Z, Z, Z, C('#4f8fae'));
+  for (const dx of [-2.5, 0, 2.5]) figure(VM, sx * 46 + dx, 1.2, -1.5, 5 + rnd(), MARBLE);
+  // gilded groups at the foot of the main stair (Il Pensiero / L'Azione)
+  boxC(VM, sx * 28, -32, 8, 7, 0, 7, MARBLE2);
+  for (const [dx, dz, h] of [[-1.6, 0, 6], [1.4, 0.5, 5.4], [0, -1.6, 4.6]]) figure(VG, sx * 28 + dx, 7, -32 + dz, h, GOLD);
+  // side stairs flanking the altar
+  steps(VM, sx < 0 ? -26 : 12, sx < 0 ? -12 : 26, -10, 8, 14, 24, MARBLE);
+  // flag poles with the Italian flag
+  cyl(VB, sx * 15, -11, 14, 32, 0.15, 0.1, BRONZE, 6);
+  [C('#0b8a45'), C('#f2f2ee'), C('#cf2b37')].forEach((c, q) => VF.quad([sx * 15 + q * 1.5 * sx, 28.8, -11], [sx * 15 + (q + 1) * 1.5 * sx, 28.8, -11], [sx * 15 + (q + 1) * 1.5 * sx, 31.8, -11], [sx * 15 + q * 1.5 * sx, 31.8, -11], Z, Z, Z, Z, c));
+}
+steps(VM, -22, 22, -38, -12, 0, 14, MARBLE);                    // main staircase from the piazza
+steps(VM, -30, 30, 32, 50, 24, 40, MARBLE);                     // upper flight to the portico
+// Altare della Patria with the Dea Roma in front of a golden background
+box(VM, -12, 12, 14, 25, -10, 8, MARBLE2);
+VG.quad([-7, 15.5, -10.05], [7, 15.5, -10.05], [7, 23.5, -10.05], [-7, 23.5, -10.05], Z, Z, Z, Z, GOLD);
+figure(VM, 0, 15.5, -10.8, 7.2, MARBLE);
+for (let x = -6; x <= 6; x += 3) if (x) figure(VM, x, 16, -10.4, 3.2, MARBLE2);
+// equestrian statue of Vittorio Emanuele II (bronze, 12 m)
+box(VM, -6.5, 6.5, 24, 36, 14, 32, MARBLE2);
+box(VM, -7.2, 7.2, 35, 36.4, 13.3, 32.7, MARBLE);
+horse(VB, 0, 36.4, 23, 1.15, BRONZE);
+ell(VB, 0, 36.4 + 9.3 * 1.15, 23.6, 1.0, 1.9, 0.8, BRONZE); ell(VB, 0, 36.4 + 11.6 * 1.15, 23.6, 0.6, 0.7, 0.6, BRONZE);
+// portico: 16 Corinthian columns on a slightly concave line
+const pz = x => 58 - 0.003 * x * x;
+box(VM, -37, 37, 40, 41.6, 50, 74, MARBLE2);
+const CX = Array.from({ length: 16 }, (_, i) => -33.75 + i * 4.5);
+for (const x of CX) {
+  cyl(VM, x, pz(x), 41.6, 42.4, 1.2, 1.15, MARBLE); cyl(VM, x, pz(x), 42.4, 55.6, 0.95, 0.8, MARBLE);
+  boxC(VM, x, pz(x), 2.3, 2.3, 55.6, 57.2, MARBLE2);
+  figure(VM, x, 64.4, pz(x) + 0.4, 4.2, MARBLE);
+}
+for (let i = 0; i < 15; i++) {
+  const xa = CX[i] - (i === 0 ? 2 : 0), xb = CX[i + 1] + (i === 14 ? 2 : 0), z = pz((CX[i] + CX[i + 1]) / 2);
+  box(VM, xa - 0.6, xb + 0.6, 57.2, 60.6, z - 1.4, 74, MARBLE);
+  box(VM, xa - 0.6, xb + 0.6, 60.6, 64.4, z - 0.6, 74, MARBLE2);
+}
+box(VM, -36, 36, 41.6, 57.2, 70, 74, SHADE);                   // rear wall of the portico (in shadow)
+// propylaea with gilded quadrigas (Unity / Liberty)
+for (const sx of [-1, 1]) {
+  const xi = sx * 37, xo = sx * 56, xl = Math.min(xi, xo), xr = Math.max(xi, xo);
+  box(VM, xl, xr, 40, 42.6, 50, 76, MARBLE2);
+  box(VM, xl + 1, xr - 1, 42.6, 58.4, 61, 76, SHADE);
+  for (const x of [39.5, 44, 48.5, 53]) { cyl(VM, sx * x, 53, 42.6, 43.4, 1.25, 1.2, MARBLE); cyl(VM, sx * x, 53, 43.4, 57, 1.0, 0.85, MARBLE); boxC(VM, sx * x, 53, 2.4, 2.4, 57, 58.4, MARBLE2); }
+  for (const x of [39.5, 53]) for (const z of [57.5, 62]) cyl(VM, sx * x, z, 42.6, 57, 1.0, 0.85, MARBLE);
+  box(VM, xl - 0.6, xr + 0.6, 58.4, 62, 51.4, 76.6, MARBLE);
+  box(VM, xl, xr, 62, 68.5, 52, 76, MARBLE2);
+  VF.quad([xl + 2, 64, 51.95], [xr - 2, 64, 51.95], [xr - 2, 66, 51.95], [xl + 2, 66, 51.95], Z, Z, Z, Z, C('#9c8a62'));
+  boxC(VM, sx * 46.5, 64, 10, 9, 68.5, 70, MARBLE);
+  for (const dx of [-3.3, -1.1, 1.1, 3.3]) horse(VG, sx * 46.5 + dx, 70, 61.5, 0.5, GOLD);
+  box(VG, sx * 46.5 - 2, sx * 46.5 + 2, 70.8, 72.4, 64.4, 66.4, GOLD);
+  figure(VG, sx * 46.5, 72, 65.6, 5.5, GOLD);
+  box(VG, sx * 46.5 - 3.2, sx * 46.5 + 3.2, 75, 76.6, 65.9, 66.2, GOLD);   // wings of Victory
+}
+box(VM, -36, 36, 57.2, 66, 74, 104, MARBLE2);                   // halls behind the portico
+const MV = {
+  m: mat(marbleTex, { roughness: 0.55 }), g: new THREE.MeshStandardMaterial({ color: 0xe0b04a, metalness: 0.55, roughness: 0.35, vertexColors: true, side: THREE.DoubleSide, emissive: 0x3a2a08 }),
+  b: new THREE.MeshStandardMaterial({ color: 0x4c5446, metalness: 0.4, roughness: 0.5, vertexColors: true, side: THREE.DoubleSide }),
+};
+vit.add(VM.mesh(MV.m), VG.mesh(MV.g), VB.mesh(MV.b), VF.mesh(MAT.flat, false));
+scene.add(vit);
+
+// ---------- Arch of Constantine (local: x along the facade, y up, z through the passages) ----------
+{
+  const AC = { x: -142.9, y: -63.2, rot: Math.atan2(-5.7, 24.7) };   // from the OSM footprint (25.4 × 6.9 m)
+  const W = 25.4, D = 6.9, HB = 12.3, HA = 21, P = 1.3;             // width, depth, body/attic height, column projection
+  const ARCH = [{ cx: -8.23, w: 3.36, top: 7.4 }, { cx: 0, w: 6.5, top: 11.45 }, { cx: 8.23, w: 3.36, top: 7.4 }];
+  const COLS = [-11.3, -4.9, 4.9, 11.3];
+  const g = new THREE.Group(); g.position.set(AC.x, gh(AC.x, AC.y), -AC.y); g.rotation.y = AC.rot;
+  const AM = new Geo(), AY = new Geo();                           // white marble, giallo antico columns
+  const WM = () => C('#ddd4c1', 0.08), DARK = C('#b9ae98'), GIALLO = C('#d6b679');
+  function reliefTex(seed, w = 256, h = 256, base = '#e2d9c6') {
+    seed = seed * 7919 + 1;
+    return tex(w, h, (c, W2, H2) => {
+      c.fillStyle = base; c.fillRect(0, 0, W2, H2);
+      c.strokeStyle = 'rgba(70,60,45,.55)'; c.lineWidth = 6; c.strokeRect(3, 3, W2 - 6, H2 - 6);
+      const n = 5 + Math.floor(rnd() * 4);
+      for (let i = 0; i < n; i++) {                                   // standing figures in high relief: shadow, body, light edge
+        const x = (i + 0.5 + (rnd() - 0.5) * 0.4) / n * W2, fh = H2 * (0.55 + rnd() * 0.25), y = H2 - 10;
+        for (const [dx, col] of [[5, 'rgba(60,50,38,.45)'], [0, 'rgba(240,233,218,1)'], [-2, 'rgba(255,255,255,.5)']]) {
+          c.fillStyle = col; c.beginPath();
+          c.ellipse(x + dx, y - fh * 0.42, W2 / n * 0.28, fh * 0.42, (rnd() - 0.5) * 0.3, 0, 7); c.fill();
+          c.beginPath(); c.arc(x + dx, y - fh * 0.9, W2 / n * 0.13, 0, 7); c.fill();
+        }
+      }
+      speckle(c, W2, H2, 2500, 0.12);
+    });
+  }
+  const inscription = tex(1024, 420, (c, w, h) => {
+    c.fillStyle = '#d7cdb7'; c.fillRect(0, 0, w, h); speckle(c, w, h, 6000, 0.1);
+    c.strokeStyle = 'rgba(80,70,55,.6)'; c.lineWidth = 12; c.strokeRect(8, 8, w - 16, h - 16);
+    const L = ['IMP · CAES · FL · CONSTANTINO · MAXIMO', 'P · F · AVGVSTO · S · P · Q · R', 'QVOD · INSTINCTV · DIVINITATIS · MENTIS',
+      'MAGNITVDINE · CVM · EXERCITV · SVO', 'TAM · DE · TYRANNO · QVAM · DE · OMNI · EIVS', 'FACTIONE · VNO · TEMPORE · IVSTIS',
+      'REMPVBLICAM · VLTVS · EST · ARMIS', 'ARCVM · TRIVMPHIS · INSIGNEM · DICAVIT'];
+    c.textAlign = 'center'; c.textBaseline = 'middle';
+    L.forEach((t, i) => {
+      c.font = `bold ${i < 2 ? 44 : 38}px "Times New Roman", Times, serif`;
+      const y = 40 + i * 47;
+      c.fillStyle = 'rgba(255,255,255,.55)'; c.fillText(t, w / 2 + 2, y + 2, w - 60);
+      c.fillStyle = '#4a4135'; c.fillText(t, w / 2, y, w - 60);
+    });
+  });
+  const RM = (map) => new THREE.MeshLambertMaterial({ map, side: THREE.DoubleSide });
+  const panel = (map, x, y, w, h, z, face) => {                     // relief/inscription slab, offset from the face
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), RM(map));
+    m.position.set(x, y, z); if (face > 0) m.rotation.y = Math.PI; m.receiveShadow = true; g.add(m);
+  };
+  // facade outline with the three arched openings (front and back), intrados of each passage
+  const outline = [new THREE.Vector2(-W / 2, 0)];
+  for (const a of ARCH) {
+    const r = a.w / 2, sp = a.top - r;
+    outline.push(new THREE.Vector2(a.cx - r, 0), new THREE.Vector2(a.cx - r, sp));
+    for (let i = 1; i < 24; i++) { const t = Math.PI - i / 24 * Math.PI; outline.push(new THREE.Vector2(a.cx + r * Math.cos(t), sp + r * Math.sin(t))); }
+    outline.push(new THREE.Vector2(a.cx + r, sp), new THREE.Vector2(a.cx + r, 0));
+  }
+  outline.push(new THREE.Vector2(W / 2, 0), new THREE.Vector2(W / 2, HB), new THREE.Vector2(-W / 2, HB));
+  const ftris = THREE.ShapeUtils.triangulateShape(outline, []);
+  for (const z of [-D / 2, D / 2]) { const k = WM(); for (const [i, j, l] of ftris) AM.tri([outline[i].x, outline[i].y, z], [outline[j].x, outline[j].y, z], [outline[l].x, outline[l].y, z], [outline[i].x / 6, outline[i].y / 6], [outline[j].x / 6, outline[j].y / 6], [outline[l].x / 6, outline[l].y / 6], k); }
+  for (const a of ARCH) {
+    const r = a.w / 2, sp = a.top - r, b = [[a.cx - r, 0], [a.cx - r, sp]];
+    for (let i = 1; i < 24; i++) { const t = Math.PI - i / 24 * Math.PI; b.push([a.cx + r * Math.cos(t), sp + r * Math.sin(t)]); }
+    b.push([a.cx + r, sp], [a.cx + r, 0]);
+    for (let i = 0; i < b.length - 1; i++) AM.quad([b[i][0], b[i][1], -D / 2], [b[i + 1][0], b[i + 1][1], -D / 2], [b[i + 1][0], b[i + 1][1], D / 2], [b[i][0], b[i][1], D / 2], [0, b[i][1] / 6], [0.2, b[i + 1][1] / 6], [1.2, b[i + 1][1] / 6], [1, b[i][1] / 6], i % 6 ? DARK : C('#a99e88'));
+    for (const sz of [-1, 1]) {                                     // archivolt moulding + keystone
+      const z = sz * (D / 2 + 0.12);
+      for (let i = 0; i < 24; i++) {
+        const t0 = Math.PI - i / 24 * Math.PI, t1 = Math.PI - (i + 1) / 24 * Math.PI, r1 = r + 0.5;
+        AM.quad([a.cx + r * Math.cos(t0), sp + r * Math.sin(t0), z], [a.cx + r * Math.cos(t1), sp + r * Math.sin(t1), z], [a.cx + r1 * Math.cos(t1), sp + r1 * Math.sin(t1), z], [a.cx + r1 * Math.cos(t0), sp + r1 * Math.sin(t0), z], Z, Z, Z, Z, C('#e8e0cf'));
+      }
+      boxC(AM, a.cx, sz * (D / 2 + 0.2), a.w > 5 ? 1.1 : 0.7, 0.4, a.top - 0.2, a.top + (a.w > 5 ? 1.0 : 0.6), C('#e8e0cf'));
+    }
+  }
+  for (const x of [-W / 2, W / 2]) AM.quad([x, 0, -D / 2], [x, 0, D / 2], [x, 14.4, D / 2], [x, 14.4, -D / 2], [0, 0], [D / 6, 0], [D / 6, 2.4], [0, 2.4], WM());   // end walls
+  for (const sz of [-1, 1]) {
+    const f = sz * D / 2, o = sz * (D / 2 + P);                      // face plane and front of the column projections
+    for (const x of COLS) {
+      boxC(AM, x, (f + o) / 2, 2.1, P, 0, 3.6, WM());                // pedestal with relief and mouldings
+      boxC(AM, x, (f + o) / 2, 2.4, P + 0.3, 3.4, 3.9, C('#e6dece'));
+      boxC(AM, x, (f + o) / 2, 2.4, P + 0.3, 0, 0.4, C('#cfc5b0'));
+      panel(reliefTex(x + sz * 3, 128, 128), x, 1.9, 1.6, 2.2, o + sz * 0.02, sz);
+      cyl(AY, x, (f + o) / 2, 3.9, 4.4, 0.62, 0.55, C('#e6dece'));     // base
+      cyl(AY, x, (f + o) / 2, 4.4, 11.6, 0.48, 0.41, GIALLO);         // giallo antico shaft
+      boxC(AM, x, (f + o) / 2, 1.35, 1.35, 11.6, 12.3, C('#ece5d6'));  // Corinthian capital (block)
+      boxC(AM, x, f + sz * 0.12, 1.0, 0.24, 3.9, 12.3, WM());          // pilaster behind the column
+      boxC(AM, x, (f + o) / 2, 2.3, P + 0.4, 12.3, 14.4, WM());        // entablature ressaut
+      boxC(AM, x, (f + o) / 2, 2.0, P, 14.4, 15.2, C('#d4cab5'));      // statue plinth on the attic
+      figure(AM, x, 15.2, (f + o) / 2, 3.6, C('#ece6da'));             // Dacian prisoner
+    }
+    box(AM, -W / 2 - 0.25, W / 2 + 0.25, 12.3, 14.4, sz < 0 ? f - 0.35 : f, sz < 0 ? f : f + 0.35, C('#e4dccb'));   // entablature
+    box(AM, -W / 2 - 0.4, W / 2 + 0.4, 14.0, 14.4, sz < 0 ? f - 0.55 : f, sz < 0 ? f : f + 0.55, C('#efe8da'));   // cornice
+    // frieze above the side arches and tondi (Hadrianic roundels)
+    for (const sx of [-1, 1]) {
+      panel(reliefTex(sx * 5 + sz, 512, 64, '#dad1bd'), sx * 8.23, 8.15, 7.6, 0.9, f + sz * 0.04, sz);
+      for (const dx of [-1.25, 1.25]) {
+        const cx = sx * 8.23 + dx, m = new THREE.Mesh(new THREE.CircleGeometry(1.1, 32), RM(reliefTex(cx * 3 + sz, 128, 128, '#d9cfbb')));
+        m.position.set(cx, 10.25, f + sz * 0.05); if (sz > 0) m.rotation.y = Math.PI; m.receiveShadow = true; g.add(m);
+        const ring = new THREE.Mesh(new THREE.RingGeometry(1.1, 1.3, 32), new THREE.MeshLambertMaterial({ color: 0xe9e2d2, side: THREE.DoubleSide }));
+        ring.position.copy(m.position); ring.position.z += sz * 0.03; ring.rotation.y = m.rotation.y; g.add(ring);
+      }
+    }
+    // Victories in the spandrels of the central arch
+    for (const sx of [-1, 1]) panel(reliefTex(sx * 11 + sz, 128, 96, '#dcd3bf'), sx * 2.6, 10.9, 2.0, 1.3, f + sz * 0.04, sz);
+    // attic: inscription between the inner statues, Aurelian relief panels between inner and outer statues
+    panel(inscription, 0, 17.7, 8.4, 4.6, f + sz * 0.04, sz);
+    for (const sx of [-1, 1]) panel(reliefTex(sx * 17 + sz * 2, 256, 256), sx * 8.1, 17.6, 4.6, 4.4, f + sz * 0.04, sz);
+  }
+  box(AM, -W / 2, W / 2, 14.4, HA - 0.6, -D / 2, D / 2, WM());           // attic
+  box(AM, -W / 2 - 0.3, W / 2 + 0.3, HA - 0.6, HA, -D / 2 - 0.3, D / 2 + 0.3, C('#ece5d6'));   // attic cornice
+  g.add(AM.mesh(MV.m), AY.mesh(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.45, side: THREE.DoubleSide })));
+  scene.add(g);
+}
+
+// ---------- bike ride: Piazza Venezia -> Circo Massimo -> around the Colosseum -> Via dei Fori Imperiali -> back ----------
+// S.route: road-graph shortest path from data/route.py (asphalt preferred, paving only where no road exists)
+const route = (() => {
+  const raw = pts2(S.route), pts = [raw[0]];
+  for (let i = 1; i < raw.length - 1; i++) {                    // round off junction corners by at most 4 m
+    const a = raw[i - 1], b = raw[i], c = raw[i + 1];
+    const r1 = Math.min(4, a.distanceTo(b) / 3), r2 = Math.min(4, b.distanceTo(c) / 3);
+    pts.push(b.clone().addScaledVector(a.clone().sub(b).normalize(), r1), b.clone().addScaledVector(c.clone().sub(b).normalize(), r2));
+  }
+  pts.push(raw[raw.length - 1]);
+  return new THREE.CatmullRomCurve3(pts.map(p => new THREE.Vector3(p.x, 0, -p.y)), false, 'centripetal');
+})();
+// fine arc-length table (default is 200 samples ≈ 18 m each): otherwise the rider speeds up and slows down within each sample
+route.arcLengthDivisions = route.points.length * 20; route.updateArcLengths();
+const ROUTE_LEN = route.getLength();
+
+// route drawn on the ground in neon yellow: a crisp core line plus a soft, wider glow
+const routeLine = new THREE.Group();
+{
+  const pts = route.getSpacedPoints(Math.ceil(ROUTE_LEN / 2));
+  const ribbon = (w, lift) => {                                  // one continuous strip with mitred joints (no overlaps or gaps)
+    const pos = [], idx = [];
+    pts.forEach((p, i) => {
+      const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)], dx = b.x - a.x, dz = b.z - a.z, L = Math.hypot(dx, dz) || 1;
+      const nx = -dz / L * w / 2, nz = dx / L * w / 2, y = gh(p.x, -p.z) + lift;
+      pos.push(p.x + nx, y, p.z + nz, p.x - nx, y, p.z - nz);
+      if (i) idx.push(2 * i - 2, 2 * i - 1, 2 * i, 2 * i - 1, 2 * i + 1, 2 * i);
+    });
+    return new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)).setIndex(idx);
+  };
+  const neon = { side: THREE.DoubleSide, toneMapped: false, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8 };
+  routeLine.add(new THREE.Mesh(ribbon(2.0, 0.4), new THREE.MeshBasicMaterial({ ...neon, color: 0xe6ff00, transparent: true, opacity: 0.16, blending: THREE.AdditiveBlending })));
+  routeLine.add(new THREE.Mesh(ribbon(0.55, 0.42), new THREE.MeshBasicMaterial({ ...neon, color: 0xf2ff1a })));
+  const wide = new THREE.Mesh(ribbon(7, 0.45), new THREE.MeshBasicMaterial({ ...neon, color: 0xf2ff1a, transparent: true, opacity: 0.85 }));
+  wide.name = 'overview';                                         // wide line so the route reads from the overview cameras
+  routeLine.add(wide);
+  routeLine.children.forEach(m => m.renderOrder = 2);
+  scene.add(routeLine);
+}
+
+const bike = new THREE.Group(), lean = new THREE.Group();
+bike.add(lean); scene.add(bike);
+const BM = c => new THREE.MeshStandardMaterial({ color: c, roughness: 0.5, metalness: 0.1 });
+const mFrame = BM(0xd32f2f), mBlack = BM(0x1b1b1b), mJersey = BM(0x1f6fd1), mShorts = BM(0x202428), mSkin = BM(0xd9a07b), mHelmet = BM(0xf5c518);
+const ROD = new THREE.CylinderGeometry(1, 1, 1, 10);
+const rod = (r, m) => { const o = new THREE.Mesh(ROD, m); o.scale.set(r, 1, r); o.castShadow = true; lean.add(o); return o; };
+const _up = new THREE.Vector3(0, 1, 0), _d = new THREE.Vector3();
+function setRod(o, a, b) {
+  _d.subVectors(b, a); const L = _d.length();
+  o.position.copy(a).addScaledVector(_d, 0.5); o.quaternion.setFromUnitVectors(_up, _d.normalize()); o.scale.y = L;
+}
+const V = (x, y, z) => new THREE.Vector3(x, y, z);
+const wheels = [-0.52, 0.52].map(z => {
+  const w = new THREE.Group(); w.position.set(0, 0.34, z);
+  const tire = new THREE.Mesh(new THREE.TorusGeometry(0.34, 0.035, 8, 32), mBlack); tire.rotation.y = Math.PI / 2;
+  w.add(tire);
+  for (let i = 0; i < 4; i++) { const sp = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.66, 0.01), BM(0xbbbbbb)); sp.rotation.x = i * Math.PI / 4; w.add(sp); }
+  tire.castShadow = true; lean.add(w); return w;
+});
+const J = { R: V(0, .34, -.52), F: V(0, .34, .52), BB: V(0, .30, -.02), S: V(0, .86, -.2), H: V(0, .92, .38), Hb: V(0, .72, .43) };
+for (const [a, b] of [['R', 'BB'], ['R', 'S'], ['BB', 'S'], ['BB', 'Hb'], ['S', 'H'], ['Hb', 'F'], ['H', 'Hb']]) setRod(rod(0.022, mFrame), J[a], J[b]);
+setRod(rod(0.015, mBlack), V(-.22, .97, .37), V(.22, .97, .37));
+setRod(rod(0.04, mBlack), V(0, .89, -.3), V(0, .89, -.1));
+const hip = V(0, .95, -.2), shoulder = V(0, 1.43, .14);
+setRod(rod(0.15, mJersey), hip, shoulder);
+const head = new THREE.Mesh(new THREE.SphereGeometry(0.11, 16, 12), mSkin); head.position.set(0, 1.6, .24); lean.add(head);
+const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.135, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), mHelmet); helmet.position.set(0, 1.62, .23); helmet.scale.z = 1.25; lean.add(helmet);
+head.castShadow = helmet.castShadow = true;
+for (const sx of [-1, 1]) setRod(rod(0.045, mJersey), V(sx * .19, 1.40, .14), V(sx * .21, .98, .37));
+const legs = [-1, 1].map(sx => ({ sx, thigh: rod(0.075, mShorts), shin: rod(0.05, mSkin) }));
+const crank = rod(0.02, BM(0x999999));
+function pedal(phi) {
+  for (const L of legs) {
+    const a = phi + (L.sx > 0 ? Math.PI : 0);
+    const foot = V(L.sx * .1, J.BB.y + 0.17 * Math.sin(a), J.BB.z + 0.17 * Math.cos(a)), h = V(L.sx * .1, hip.y, hip.z);
+    const d = Math.min(h.distanceTo(foot), 0.89), m = h.clone().lerp(foot, 0.5), off = Math.sqrt(Math.max(0, 0.45 ** 2 - (d / 2) ** 2));
+    const dir = foot.clone().sub(h).normalize(), perp = V(0, dir.z, -dir.y);
+    if (perp.z < 0) perp.negate();                                // knee always points forward
+    const knee = m.addScaledVector(perp, off);
+    setRod(L.thigh, h, knee); setRod(L.shin, knee, foot);
+  }
+  setRod(crank, V(0, J.BB.y + .17 * Math.sin(phi), J.BB.z + .17 * Math.cos(phi)), V(0, J.BB.y - .17 * Math.sin(phi), J.BB.z - .17 * Math.cos(phi)));
+}
+pedal(0);
+bike.visible = false;
+
+const ride = { on: false, s: 0, v: 2, phi: 0, lean: 0, pitch: 0, heading: null, cam: 'chase', camYaw: 0, camD: 7.5, camH: 2.8 };
+const hud = document.getElementById('hud');
+// elevation profile along the route (2 m samples) and gradient smoothed over ±10 m
+const PROF_STEP = 2, PROF = [];
+for (let d = 0; d <= ROUTE_LEN; d += PROF_STEP) { const q = route.getPointAt(Math.min(1, d / ROUTE_LEN)); PROF.push(gh(q.x, -q.z)); }
+const profAt = (arr, d) => { const f = THREE.MathUtils.clamp(d / PROF_STEP, 0, arr.length - 1.001), i = Math.floor(f); return arr[i] + (arr[i + 1] - arr[i]) * (f - i); };
+const GRADE = PROF.map((_, i) => (PROF[Math.min(PROF.length - 1, i + 5)] - PROF[Math.max(0, i - 5)]) / (PROF_STEP * (Math.min(PROF.length - 1, i + 5) - Math.max(0, i - 5))));
+
+// riding physics: rider holds a target power; speed follows from rolling resistance, gravity and air drag
+const PHYS = { m: 88, crr: 0.006, cda: 0.38, rho: 1.2, eta: 0.97, P: 190, vMax: 9.7, vMin: 2.0 };
+function powerAt(v, g) {
+  const th = Math.atan(g), w = PHYS.m * 9.81;
+  return (PHYS.crr * w * Math.cos(th) + w * Math.sin(th) + 0.5 * PHYS.rho * PHYS.cda * v * v) * v / PHYS.eta;
+}
+
+function placeBike(dt) {
+  // heading from the chord ±2 m around the rider (robust at junction corners), then smoothed so the bike never turns sideways
+  const L = ROUTE_LEN, u = ride.s / L, p = route.getPointAt(u);
+  const pa = route.getPointAt(Math.max(0, u - 2 / L)), pb = route.getPointAt(Math.min(1, u + 2 / L));
+  const target = Math.atan2(pb.x - pa.x, pb.z - pa.z);
+  if (ride.heading === null) ride.heading = target;
+  const dh = Math.atan2(Math.sin(target - ride.heading), Math.cos(target - ride.heading));
+  ride.heading += dh * Math.min(1, dt * 6);
+  const qa = route.getPointAt(Math.max(0, u - 6 / L)), qb = route.getPointAt(Math.min(1, u + 6 / L));
+  const turn = Math.atan2(Math.sin(Math.atan2(qb.x - p.x, qb.z - p.z) - Math.atan2(p.x - qa.x, p.z - qa.z)), Math.cos(Math.atan2(qb.x - p.x, qb.z - p.z) - Math.atan2(p.x - qa.x, p.z - qa.z)));
+  ride.lean += (THREE.MathUtils.clamp(-Math.atan(ride.v ** 2 * (turn / 6) / 9.81), -0.3, 0.3) - ride.lean) * Math.min(1, dt * 3);   // tan(lean) = v² κ / g
+  p.y = gh(p.x, -p.z) + 0.33;                                    // road surface sits 0.3-0.36 m above the terrain
+  ride.pitch += (-Math.atan(profAt(GRADE, ride.s)) - ride.pitch) * Math.min(1, dt * 4);
+  bike.position.copy(p);
+  bike.rotation.set(ride.pitch, ride.heading, 0, 'YXZ'); lean.rotation.z = ride.lean;
+  return { p, t: new THREE.Vector3(Math.sin(ride.heading), 0, Math.cos(ride.heading)) };
+}
+const look = new THREE.Vector3();
+const STAT = { grade: document.getElementById('sGrade'), speed: document.getElementById('sSpeed'), power: document.getElementById('sPower'), alt: document.getElementById('sAlt') };
+const profCv = document.getElementById('prof'), pc = profCv.getContext('2d');
+const profBase = (() => {                                       // static profile drawn once, marker added per frame
+  const c = document.createElement('canvas'); c.width = profCv.width; c.height = profCv.height;
+  const g = c.getContext('2d'), w = c.width, h = c.height, lo = Math.min(...PROF), hi = Math.max(...PROF);
+  const X = i => i / (PROF.length - 1) * w, Y = v => h - 6 - (v - lo) / (hi - lo || 1) * (h - 18);
+  g.beginPath(); g.moveTo(0, h); PROF.forEach((v, i) => g.lineTo(X(i), Y(v))); g.lineTo(w, h); g.closePath();
+  g.fillStyle = 'rgba(120,170,220,.28)'; g.fill();
+  g.beginPath(); PROF.forEach((v, i) => g[i ? 'lineTo' : 'moveTo'](X(i), Y(v))); g.strokeStyle = '#8fc1f0'; g.lineWidth = 2; g.stroke();
+  g.fillStyle = 'rgba(255,255,255,.65)'; g.font = '11px -apple-system, system-ui, sans-serif';
+  g.fillText(`${Math.round(hi + BASE)} m`, 4, 12); g.fillText(`${Math.round(lo + BASE)} m`, 4, h - 4);
+  return { c, X, Y };
+})();
+const fmt = (v, d = 0) => v.toLocaleString('de-DE', { minimumFractionDigits: d, maximumFractionDigits: d });
+function updateStats(grade, v, P, alt) {
+  STAT.grade.textContent = `${grade > 0.0005 ? '+' : ''}${fmt(grade * 100, 1)} %`;
+  STAT.grade.style.color = grade > 0.03 ? '#ff9b7a' : grade < -0.03 ? '#8fd18f' : '';
+  STAT.speed.textContent = `${fmt(v * 3.6, 1)} km/h`;
+  STAT.power.textContent = `${fmt(P)} W`;
+  STAT.alt.textContent = `${fmt(alt)} m`;
+  pc.clearRect(0, 0, profCv.width, profCv.height); pc.drawImage(profBase.c, 0, 0);
+  const i = ride.s / PROF_STEP, x = profBase.X(i), y = profBase.Y(profAt(PROF, ride.s));
+  pc.fillStyle = '#ffd34d'; pc.beginPath(); pc.arc(x, y, 4, 0, 7); pc.fill();
+}
+function rideStep(dt) {
+  ride.mult = +document.getElementById('speed').value;
+  const grade = profAt(GRADE, ride.s);
+  // integrate m·dv/dt = P·η/v − resistance: the rider pedals at target power, coasts near top speed (brakes above it)
+  // and pushes harder only to keep a minimum speed on steep climbs
+  const sim = dt * ride.mult, th = Math.atan(grade), W = PHYS.m * 9.81;
+  const riderPower = v => v < PHYS.vMax - 0.4 ? Math.max(PHYS.P, v < PHYS.vMin + 0.3 ? powerAt(PHYS.vMin, grade) : 0) : 0;
+  for (let k = 0, n = Math.ceil(sim / 0.02); k < n; k++) {
+    const h = sim / n, v = ride.v, P = riderPower(v);
+    const F = PHYS.crr * W * Math.cos(th) + W * Math.sin(th) + 0.5 * PHYS.rho * PHYS.cda * v * v;
+    ride.v = Math.min(PHYS.vMax, Math.max(0.5, v + (P * PHYS.eta / Math.max(v, 1) - F) / (PHYS.m * 1.05) * h));
+  }
+  const P = riderPower(ride.v), ds = ride.v * sim;
+  ride.s = Math.min(ROUTE_LEN, ride.s + ds);
+  if (P > 5) { ride.phi += ds / 2.1 * 2 * Math.PI / 2.6; pedal(ride.phi); }   // coasting downhill: no pedalling
+  for (const w of wheels) w.rotation.x += ds / 0.34;
+  const { p, t } = placeBike(dt);
+  const drone = ride.cam === 'drone';
+  // camera is rigidly attached to the rider (constant distance/height); only its yaw trails the bike's heading
+  const D = drone ? 28 : 7.5, H = drone ? 22 : 2.8, kz = 1 - Math.exp(-dt * 2);
+  ride.camYaw += Math.atan2(Math.sin(ride.heading - ride.camYaw), Math.cos(ride.heading - ride.camYaw)) * (1 - Math.exp(-dt * 2.5));
+  ride.camD += (D - ride.camD) * kz; ride.camH += (H - ride.camH) * kz;   // eases only when switching camera mode
+  const sy = Math.sin(ride.camYaw), cy = Math.cos(ride.camYaw), ahead = drone ? 10 : 6;
+  const cx = p.x - sy * ride.camD, cz = p.z - cy * ride.camD;
+  camera.position.set(cx, Math.max(p.y + ride.camH, gh(cx, -cz) + 1.2), cz);
+  look.set(p.x + sy * ahead, p.y + (drone ? 0 : 1.3), p.z + cy * ahead); camera.lookAt(look);
+  setShadow('ride', p.clone().addScaledVector(t, 120));   // shadow window reaches further ahead than behind
+  updateStats(grade, ride.v, P, p.y - 0.33 + BASE);
+  const dCol = Math.hypot(p.x, p.z), [vx, vd] = vitLocal(p.x, -p.z);
+  const [qx, qy] = [p.x, -p.z], dCirc = Math.hypot(qx + 605, qy + 468);
+  const where = dCol < 190 ? 'Rund um das Kolosseum' : vd < 40 && Math.abs(vx) < 160 ? 'Piazza Venezia · Altare della Patria'
+    : dCirc < 330 ? 'Circo Massimo' : qx < -820 ? 'Via del Teatro di Marcello' : qy < -150 && qx > -330 ? 'Via di San Gregorio'
+    : qy < 150 && qx < -600 ? 'Via Petroselli · Bocca della Verità' : 'Via dei Fori Imperiali';
+  hud.textContent = `${where} · ${fmt(ride.s / 1000, 2)} / ${fmt(ROUTE_LEN / 1000, 2)} km · Zeitraffer × ${ride.mult}`;
+  if (ride.s >= ROUTE_LEN) { stopRide(true); view('venezia'); }
+}
+function startRide() {
+  if (ride.s >= ROUTE_LEN || ride.s === 0) {
+    ride.s = 0; ride.v = 2; ride.mult = 1; ride.heading = null; const { p, t } = placeBike(1);
+    ride.camYaw = ride.heading + Math.PI; ride.camD = 14; ride.camH = 4;   // start in front of the rider, then swing behind
+  }
+  ride.on = true; bike.visible = true; routeLine.getObjectByName('overview').visible = false; camera.fov = 62; camera.near = 0.5; camera.far = 2600; scene.fog.near = 700; scene.fog.far = 2500; camera.updateProjectionMatrix(); controls.enabled = false; controls.autoRotate = false; tween = null;
+  hud.style.display = ''; document.getElementById('stats').style.display = ''; document.getElementById('ride').classList.add('on'); document.getElementById('ride').textContent = 'Radfahrt ❚❚';
+}
+function stopRide(done = false) {
+  ride.on = false; controls.enabled = true; routeLine.getObjectByName('overview').visible = true; setShadow('overview'); camera.fov = 35; camera.near = 3; camera.far = 9000; scene.fog.near = 2200; scene.fog.far = 6500; camera.updateProjectionMatrix(); controls.target.copy(bike.position); controls.update();
+  document.getElementById('ride').classList.remove('on'); document.getElementById('ride').textContent = done ? 'Radfahrt ↻' : 'Radfahrt ▶';
+}
+document.getElementById('routeBtn').onclick = e => { routeLine.visible = !routeLine.visible; e.target.classList.toggle('on', routeLine.visible); };
+document.getElementById('ride').onclick = () => ride.on ? stopRide() : startRide();
+document.getElementById('camMode').onclick = e => { ride.cam = ride.cam === 'chase' ? 'drone' : 'chase'; e.target.textContent = ride.cam === 'chase' ? 'Kamera: hinter Rad' : 'Kamera: Drohne'; };
+
+// ---------- labels ----------
+const LABELS = [
+  ['Kolosseum', 41.89021, 12.49223, 62], ['Konstantinsbogen', 41.88975, 12.49065, 30], ['Forum Romanum', 41.89245, 12.48530, 30],
+  ['Palatin', 41.88905, 12.48740, 50], ['Tempel der Venus und Roma', 41.89085, 12.48895, 30], ['Circus Maximus', 41.88610, 12.48510, 20],
+  ['Vittoriano', 41.89440, 12.48300, 88], ['Palazzo Venezia', 41.89625, 12.48170, 48], ['Colle Oppio / Domus Aurea', 41.89290, 12.49560, 30], ['San Clemente', 41.88940, 12.49760, 35],
+  ['Kaiserforen', 41.89430, 12.48700, 30], ['Celio', 41.88570, 12.49380, 30],
+].map(([name, lat, lon, h]) => {
+  const [x, y] = ll(lat, lon), el = document.createElement('div');
+  el.textContent = name; document.getElementById('labels').appendChild(el);
+  return { el, p: new THREE.Vector3(x, gh(x, y) + h, -y) };
+});
+let showLabels = true;
+const tmp = new THREE.Vector3();
+function updateLabels() {
+  for (const l of LABELS) {
+    tmp.copy(l.p).project(camera);
+    const vis = showLabels && !ride.on && tmp.z < 1 && Math.abs(tmp.x) < 1.05 && Math.abs(tmp.y) < 1.05 && (1 - tmp.y) / 2 * innerHeight > 100;   // keep clear of the toolbar
+    l.el.style.display = vis ? '' : 'none';
+    if (vis) l.el.style.transform = `translate(${(tmp.x + 1) / 2 * innerWidth}px, ${(1 - tmp.y) / 2 * innerHeight}px) translate(-50%, -100%)`;
+  }
+}
+
+// ---------- views ----------
+// Google Earth link: heading 49.7°, tilt 60°, range 1571 m, FOV 35°
+const VIEWS = { ge: [49.7, 60, 1571], close: [35, 62, 430], top: [0, 0.5, 2600], venezia: [163, 68, 420, -800, 530, 30], arco: [200, 72, 75, -143, -63, 9] };
+let tween = null;
+function view(name, instant = false) {
+  const [hd, tl, r, tx = 0, ty = 0, th = 0] = VIEWS[name], h = THREE.MathUtils.degToRad(hd), t = THREE.MathUtils.degToRad(tl);
+  const tgt = new THREE.Vector3(tx, gh(tx, ty) + th, -ty);
+  const pos = new THREE.Vector3(-Math.sin(h) * r * Math.sin(t), r * Math.cos(t), Math.cos(h) * r * Math.sin(t)).add(tgt);
+  if (instant) { camera.position.copy(pos); controls.target.copy(tgt); controls.update(); return; }
+  tween = { p0: camera.position.clone(), t0: controls.target.clone(), p1: pos, t1: tgt, s: performance.now() };
+}
+document.querySelectorAll('[data-view]').forEach(b => b.onclick = () => view(b.dataset.view));
+document.getElementById('rot').onclick = e => { controls.autoRotate = !controls.autoRotate; e.target.classList.toggle('on', controls.autoRotate); };
+document.getElementById('lab').onclick = e => { showLabels = !showLabels; e.target.classList.toggle('on', showLabels); };
+
+function screenshot(w, h) {
+  const pr = renderer.getPixelRatio();
+  renderer.setPixelRatio(1); renderer.setSize(w, h, false);
+  camera.aspect = w / h; camera.updateProjectionMatrix();
+  renderer.render(scene, camera);
+  const url = renderer.domElement.toDataURL('image/png');
+  renderer.setPixelRatio(pr); onResize();
+  const a = document.createElement('a'); a.href = url; a.download = `kolosseum_3d_${w}x${h}.png`; a.click();
+}
+document.getElementById('shot').onclick = () => screenshot(3840, 2160);
+document.getElementById('shot8').onclick = () => screenshot(7680, 4320);
+
+function onResize() {
+  camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+}
+addEventListener('resize', onResize);
+
+for (const o of scene.children) if (o !== bike && o !== sun && o !== sun.target)
+  o.traverse(c => { c.updateMatrix(); c.updateMatrixWorld(true); c.matrixAutoUpdate = false; c.matrixWorldAutoUpdate = false; });
+view(VIEWS[location.hash.slice(1)] ? location.hash.slice(1) : 'ge', true);
+document.getElementById('load').remove();
+window.__ready = true;
+const INFO = location.search.includes('info') && { f: 0 };
+const fpsEl = document.getElementById('fps'), fps = { n: 0, t0: performance.now() };
+const clock = new THREE.Clock(), perf = { n: 0, t: 0, slow: 0, fast: 0, dtS: 1 / 60 }, PR_MAX = Math.min(devicePixelRatio, 2);
+if (location.hash === '#ride') { startRide(); for (let i = 0; i < +(new URLSearchParams(location.search).get('t') || 0) * 30; i++) rideStep(1 / 30); }
+renderer.setAnimationLoop(() => {
+  if (tween) {
+    const k = Math.min(1, (performance.now() - tween.s) / 1400), e = k < .5 ? 2 * k * k : 1 - (-2 * k + 2) ** 2 / 2;
+    camera.position.lerpVectors(tween.p0, tween.p1, e); controls.target.lerpVectors(tween.t0, tween.t1, e);
+    if (k === 1) tween = null;
+  }
+  const dt = Math.min(0.05, clock.getDelta());
+  fps.n++; const now = performance.now();
+  if (now - fps.t0 >= 500) { fpsEl.textContent = `${Math.round(fps.n * 1000 / (now - fps.t0))} fps`; fps.n = 0; fps.t0 = now; }
+  perf.dtS += (dt - perf.dtS) * 0.15;                          // smoothed frame time: one late frame doesn't make the rider jump
+  if (ride.on) rideStep(perf.dtS); else controls.update();
+  // adaptive resolution: keep ~60 fps by trading pixel ratio between 1 and the display's native ratio
+  // resizing the drawing buffer costs a frame, so step down only after two slow windows, step up only after
+  // five fast ones, and never step up during the ride (an oscillating resolution shows up as periodic jerks)
+  perf.t += dt;
+  if (++perf.n === 60) {
+    const ft = perf.t / perf.n, pr = renderer.getPixelRatio();
+    perf.slow = ft > 1 / 48 ? perf.slow + 1 : 0; perf.fast = ft < 1 / 58 ? perf.fast + 1 : 0;
+    if (perf.slow >= 2 && pr > 1) { renderer.setPixelRatio(Math.max(1, pr - 0.25)); perf.slow = 0; }
+    else if (perf.fast >= 5 && pr < PR_MAX && !ride.on) { renderer.setPixelRatio(Math.min(PR_MAX, pr + 0.25)); perf.fast = 0; }
+    perf.n = perf.t = 0;
+  }
+  renderer.render(scene, camera);
+  updateLabels();
+  if (INFO && ++INFO.f === 3) console.log('INFO ' + JSON.stringify({ ...renderer.info.render, pr: renderer.getPixelRatio() }));
+});
+</script>
+</body>
+</html>
