@@ -33,3 +33,4 @@ Repository: https://github.com/HelmutQualtinger/roma · Online: https://helmutqu
 - Die Schatten nachts fallen weiter aus der Sonnenrichtung (etwa 42° Höhe), während der Mond auf 12° steht.
 - Headless nicht geprüft: das Hochdrehen der Kamera mit der Maus und der Kameraflug zu den neuen Orten in der Liste.
 - Ein `#Forum%20Romanum`-Hash öffnet die Ansicht nicht, weil der Hash nicht dekodiert wird; die neuen Orte gibt es nur über die Liste.
+- Social-Media-Vorschau: `gladiator.jpeg` auf 1200 × 630 zugeschnitten als `docs/preview.jpg` (205 KB), in `og:image` und `twitter:image` eingetragen.
