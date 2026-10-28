@@ -33,7 +33,7 @@ Die Schaltflächen oben bieten:
 | Kamera | Kameramodus der Radfahrt wechseln |
 | Tempo | Abspielgeschwindigkeit der Radfahrt |
 | Screenshot 4K / 8K | Bild in hoher Auflösung speichern |
-| DE / EN / IT / FR | Sprache der Oberfläche |
+| 🇩🇪 🇬🇧 🇮🇹 🇫🇷 | Sprache der Oberfläche |
 
 Die Kamera lässt sich bis unter die Horizontale drehen, um in den Himmel zu schauen (nachts Sterne und Mond).
 
