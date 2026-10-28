@@ -24,7 +24,7 @@ Die Schaltflächen oben bieten:
 
 | Schaltfläche | Funktion |
 |---|---|
-| Google-Earth-Ansicht, Kolosseum nah, Piazza Venezia, Konstantinsbogen, Draufsicht | Vordefinierte Kameraansichten |
+| Orte … (Auswahlliste) | Kamera fliegt zu einer Ansicht (Google-Earth-Ansicht, Kolosseum nah, Piazza Venezia, Konstantinsbogen, Draufsicht) oder zu einer beschrifteten Sehenswürdigkeit |
 | Rundflug | Kreisflug um die Szene |
 | Beschriftung | Beschriftungen ein- und ausblenden |
 | Radfahrt ▶ | Radfahrt starten |
@@ -33,6 +33,9 @@ Die Schaltflächen oben bieten:
 | Kamera | Kameramodus der Radfahrt wechseln |
 | Tempo | Abspielgeschwindigkeit der Radfahrt |
 | Screenshot 4K / 8K | Bild in hoher Auflösung speichern |
+| DE / EN / IT / FR | Sprache der Oberfläche |
+
+Die Kamera lässt sich bis unter die Horizontale drehen, um in den Himmel zu schauen (nachts Sterne und Mond).
 
 Ein URL-Hash öffnet eine Ansicht direkt: `#ge`, `#close`, `#venezia`, `#arco`, `#top`. `?t=<Sekunden>#ride` startet die Radfahrt und spult sie um die angegebene Zeit vor. `?night` schaltet den Nachtmodus ein, `?info` gibt Draw Calls und Dreiecke in der Browser-Konsole aus.
 

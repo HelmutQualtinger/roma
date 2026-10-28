@@ -24,7 +24,7 @@
   #prof { display: block; margin-top: 6px; width: 236px; height: 64px; }
   @media (max-width: 640px) { #ui { max-width: calc(100% - 24px); } #stats { top: auto; bottom: 84px; } }
   #ui button { font: 13px/1 -apple-system, system-ui, sans-serif; padding: 8px 11px; border: 1px solid rgba(0,0,0,.15); border-radius: 6px; background: rgba(255,255,255,.88); color: #222; cursor: pointer; }
-  #ui select { font: 13px/1 -apple-system, system-ui, sans-serif; padding: 0 6px; border: 1px solid rgba(0,0,0,.15); border-radius: 6px; background: rgba(255,255,255,.88); color: #222; cursor: pointer; }
+  #ui select { height: 31px; font: 13px/1 -apple-system, system-ui, sans-serif; padding: 0 6px; border: 1px solid rgba(0,0,0,.15); border-radius: 6px; background: rgba(255,255,255,.88); color: #222; cursor: pointer; }
   #ui button:hover { background: #fff; }
   #ui button.on { background: #2f3b48; color: #fff; }
   #info { position: fixed; left: 12px; bottom: 10px; font-size: 12px; color: #333; background: rgba(255,255,255,.75); padding: 5px 9px; border-radius: 5px; }
@@ -45,11 +45,14 @@
 <body>
 <div id="load" data-i18n="load">Szene wird aufgebaut …</div>
 <div id="ui">
-  <button data-view="ge" data-i18n="v.ge">Google-Earth-Ansicht</button>
-  <button data-view="close" data-i18n="v.close">Kolosseum nah</button>
-  <button data-view="venezia">Piazza Venezia</button>
-  <button data-view="arco" data-i18n="v.arco">Konstantinsbogen</button>
-  <button data-view="top" data-i18n="v.top">Draufsicht</button>
+  <select id="place" aria-label="Orte">
+    <option value="" data-i18n="place" selected disabled hidden>Orte …</option>
+    <option value="ge" data-i18n="v.ge">Google-Earth-Ansicht</option>
+    <option value="close" data-i18n="v.close">Kolosseum nah</option>
+    <option value="venezia">Piazza Venezia</option>
+    <option value="arco" data-i18n="v.arco">Konstantinsbogen</option>
+    <option value="top" data-i18n="v.top">Draufsicht</option>
+  </select>
   <button id="rot" data-i18n="rot">Rundflug</button>
   <button id="lab" class="on" data-i18n="lab">Beschriftung</button>
   <button id="ride" data-i18n="ride.play">Radfahrt ▶</button>
@@ -78,7 +81,7 @@
 // Static text carries data-i18n keys; dynamic text uses tr()/setT(). Choice: ?lang=xx, then the saved choice, then the browser language, else German.
 const I18N = {
   de: {
-    title: 'Kolosseum 3D', load: 'Szene wird aufgebaut …',
+    title: 'Kolosseum 3D', place: 'Orte …', load: 'Szene wird aufgebaut …',
     'v.ge': 'Google-Earth-Ansicht', 'v.close': 'Kolosseum nah', 'v.arco': 'Konstantinsbogen', 'v.top': 'Draufsicht',
     rot: 'Rundflug', lab: 'Beschriftung', 'ride.play': 'Radfahrt ▶', 'ride.pause': 'Radfahrt ❚❚', 'ride.again': 'Radfahrt ↻',
     route: 'Route', night: 'Nacht', 'cam.chase': 'Kamera: hinter Rad', 'cam.drone': 'Kamera: Drohne', speed: 'Tempo',
@@ -89,7 +92,7 @@ const I18N = {
     'l.Tempel der Venus und Roma': 'Tempel der Venus und Roma', 'l.Circus Maximus': 'Circus Maximus', 'l.Kaiserforen': 'Kaiserforen', 'l.Celio': 'Celio',
   },
   en: {
-    title: 'Colosseum 3D', load: 'Building scene …',
+    title: 'Colosseum 3D', place: 'Places …', load: 'Building scene …',
     'v.ge': 'Google Earth view', 'v.close': 'Colosseum close-up', 'v.arco': 'Arch of Constantine', 'v.top': 'Top view',
     rot: 'Orbit', lab: 'Labels', 'ride.play': 'Bike ride ▶', 'ride.pause': 'Bike ride ❚❚', 'ride.again': 'Bike ride ↻',
     route: 'Route', night: 'Night', 'cam.chase': 'Camera: behind bike', 'cam.drone': 'Camera: drone', speed: 'Speed',
@@ -100,7 +103,7 @@ const I18N = {
     'l.Tempel der Venus und Roma': 'Temple of Venus and Roma', 'l.Circus Maximus': 'Circus Maximus', 'l.Kaiserforen': 'Imperial Fora', 'l.Celio': 'Caelian Hill',
   },
   it: {
-    title: 'Colosseo 3D', load: 'Costruzione della scena …',
+    title: 'Colosseo 3D', place: 'Luoghi …', load: 'Costruzione della scena …',
     'v.ge': 'Vista Google Earth', 'v.close': 'Colosseo da vicino', 'v.arco': 'Arco di Costantino', 'v.top': 'Vista dall’alto',
     rot: 'Volo circolare', lab: 'Etichette', 'ride.play': 'Giro in bici ▶', 'ride.pause': 'Giro in bici ❚❚', 'ride.again': 'Giro in bici ↻',
     route: 'Percorso', night: 'Notte', 'cam.chase': 'Camera: dietro la bici', 'cam.drone': 'Camera: drone', speed: 'Velocità',
@@ -111,7 +114,7 @@ const I18N = {
     'l.Tempel der Venus und Roma': 'Tempio di Venere e Roma', 'l.Circus Maximus': 'Circo Massimo', 'l.Kaiserforen': 'Fori Imperiali', 'l.Celio': 'Celio',
   },
   fr: {
-    title: 'Colisée 3D', load: 'Construction de la scène …',
+    title: 'Colisée 3D', place: 'Lieux …', load: 'Construction de la scène …',
     'v.ge': 'Vue Google Earth', 'v.close': 'Colisée de près', 'v.arco': 'Arc de Constantin', 'v.top': 'Vue de dessus',
     rot: 'Survol', lab: 'Étiquettes', 'ride.play': 'Balade à vélo ▶', 'ride.pause': 'Balade à vélo ❚❚', 'ride.again': 'Balade à vélo ↻',
     route: 'Itinéraire', night: 'Nuit', 'cam.chase': 'Caméra : derrière le vélo', 'cam.drone': 'Caméra : drone', speed: 'Vitesse',
@@ -171,7 +174,7 @@ scene.fog = new THREE.Fog(0xdde3e6, 2200, 6500);
 
 const camera = new THREE.PerspectiveCamera(35, innerWidth / innerHeight, 3, 9000);
 const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true; controls.maxPolarAngle = THREE.MathUtils.degToRad(86);
+controls.enableDamping = true; controls.maxPolarAngle = THREE.MathUtils.degToRad(125);   // past 90° the camera looks up into the sky; the main loop keeps it above ground
 controls.minDistance = 25; controls.maxDistance = 5000; controls.autoRotateSpeed = 0.6;
 
 const hemi = new THREE.HemisphereLight(0xe3edff, 0x8f8068, 1.25);
@@ -1086,7 +1089,7 @@ const LABELS = [
 ].map(([name, lat, lon, h]) => {
   const [x, y] = ll(lat, lon), el = document.createElement('div');
   if (I18N.de['l.' + name]) setT(el, 'l.' + name); else el.textContent = name; document.getElementById('labels').appendChild(el);
-  return { el, p: new THREE.Vector3(x, gh(x, y) + h, -y) };
+  return { name, el, p: new THREE.Vector3(x, gh(x, y) + h, -y) };
 });
 let showLabels = true;
 const tmp = new THREE.Vector3();
@@ -1110,7 +1113,15 @@ function view(name, instant = false) {
   if (instant) { camera.position.copy(pos); controls.target.copy(tgt); controls.update(); return; }
   tween = { p0: camera.position.clone(), t0: controls.target.clone(), p1: pos, t1: tgt, s: performance.now() };
 }
-document.querySelectorAll('[data-view]').forEach(b => b.onclick = () => view(b.dataset.view));
+// every labelled landmark is a destination too (the Colosseum and the arch already have their own views)
+const placeSel = document.getElementById('place');
+for (const l of LABELS) if (!['Kolosseum', 'Konstantinsbogen'].includes(l.name)) {
+  VIEWS[l.name] = [35, 62, 420, l.p.x, -l.p.z, 0];
+  const o = document.createElement('option'); o.value = l.name;
+  if (I18N.de['l.' + l.name]) setT(o, 'l.' + l.name); else o.textContent = l.name;
+  placeSel.appendChild(o);
+}
+placeSel.onchange = () => { if (!ride.on) view(placeSel.value); placeSel.value = ''; };   // back to the placeholder so the same place can be picked again
 document.getElementById('rot').onclick = e => { controls.autoRotate = !controls.autoRotate; e.target.classList.toggle('on', controls.autoRotate); };
 document.getElementById('lab').onclick = e => { showLabels = !showLabels; e.target.classList.toggle('on', showLabels); };
 
@@ -1156,21 +1167,30 @@ const NIGHT = { on: false, objs: new THREE.Group() };
   NIGHT.sky = new THREE.CanvasTexture(ns); NIGHT.sky.colorSpace = THREE.SRGBColorSpace;
   const N = 5000, sp = new Float32Array(N * 3), sc = new Float32Array(N * 3), col = new THREE.Color();
   for (let i = 0; i < N; i++) {
-    const z = 0.04 + rnd() * 0.96, a = rnd() * 6.2832, r = Math.sqrt(1 - z * z);    // upper hemisphere only
+    const z = 0.015 + rnd() * 0.985, a = rnd() * 6.2832, r = Math.sqrt(1 - z * z);    // upper hemisphere only
     sp.set([Math.cos(a) * r * 2000, z * 2000, Math.sin(a) * r * 2000], i * 3);
     col.setHSL(0.58 + (rnd() - 0.5) * 0.15, 0.3, 0.55 + rnd() ** 3 * 0.45).toArray(sc, i * 3);
   }
   const sg = new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(sp, 3)).setAttribute('color', new THREE.BufferAttribute(sc, 3));
   const dot = tex(32, 32, (c) => { const g2 = c.createRadialGradient(16, 16, 0, 16, 16, 16); g2.addColorStop(0, 'rgba(255,255,255,1)'); g2.addColorStop(0.35, 'rgba(255,255,255,.6)'); g2.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = g2; c.fillRect(0, 0, 32, 32); });
   NIGHT.dome = new THREE.Group();
-  NIGHT.dome.add(new THREE.Points(sg, new THREE.PointsMaterial({ size: 2.2, sizeAttenuation: false, map: dot, vertexColors: true, transparent: true, depthWrite: false, fog: false, toneMapped: false })));
-  const moonDir = SUN_DIR.clone();                                 // moonlight comes from the same side as the sun's shadows
-  const moon = new THREE.Mesh(new THREE.CircleGeometry(38, 48), new THREE.MeshBasicMaterial({ color: 0xf4f1e4, fog: false, toneMapped: false, map: tex(128, 128, c => {
+  NIGHT.dome.add(new THREE.Points(sg, new THREE.PointsMaterial({ size: 3, sizeAttenuation: false, map: dot, vertexColors: true, transparent: true, depthWrite: false, fog: false, toneMapped: false })));
+  const bright = new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(sp.slice(0, 250 * 3), 3));   // the brightest few hundred stars
+  NIGHT.dome.add(new THREE.Points(bright, new THREE.PointsMaterial({ size: 6, sizeAttenuation: false, map: dot, color: 0xfff6e8, transparent: true, depthWrite: false, fog: false, toneMapped: false })));
+  // the disc stands low (12°) on the side the moonlight comes from, so it is in frame during the ride and at flat overview angles
+  const moonDir = new THREE.Vector3(SUN_DIR.x, 0, SUN_DIR.z).normalize().multiplyScalar(Math.cos(0.21)).setY(Math.sin(0.21));
+  const moon = new THREE.Mesh(new THREE.CircleGeometry(55, 48), new THREE.MeshBasicMaterial({ color: 0xf4f1e4, fog: false, toneMapped: false, map: tex(128, 128, c => {
     c.fillStyle = '#fff'; c.fillRect(0, 0, 128, 128);
     for (let i = 0; i < 18; i++) { c.fillStyle = `rgba(150,150,160,${0.15 + rnd() * 0.2})`; c.beginPath(); c.arc(rnd() * 128, rnd() * 128, 4 + rnd() * 16, 0, 7); c.fill(); }
   }) }));
   moon.position.copy(moonDir).multiplyScalar(1900); moon.lookAt(0, 0, 0);
   NIGHT.dome.add(moon);
+  const halo = new THREE.Mesh(new THREE.CircleGeometry(260, 48), new THREE.MeshBasicMaterial({ fog: false, toneMapped: false, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, map: tex(128, 128, c => {
+    const g2 = c.createRadialGradient(64, 64, 0, 64, 64, 64); g2.addColorStop(0, 'rgba(220,228,255,.55)'); g2.addColorStop(0.25, 'rgba(190,205,255,.22)'); g2.addColorStop(1, 'rgba(160,180,255,0)');
+    c.fillStyle = g2; c.fillRect(0, 0, 128, 128);
+  }) }));
+  halo.position.copy(moonDir).multiplyScalar(1910); halo.lookAt(0, 0, 0);   // bright moon glow behind the disc
+  NIGHT.dome.add(halo);
   NIGHT.dome.children.forEach(o => o.renderOrder = -1);
   NIGHT.objs.add(NIGHT.dome);
 
@@ -1222,8 +1242,8 @@ function setNight(on) {
   NIGHT.head.material.color.setHex(on ? 0xffd9a0 : 0x5a5040); NIGHT.head.material.toneMapped = !on; NIGHT.head.material.needsUpdate = true;
   scene.background = on ? NIGHT.sky : DAY.bg;
   scene.fog.color.setHex(on ? 0x0d1324 : DAY.fog);
-  hemi.color.setHex(on ? 0x3a4a78 : DAY.hemi[0]); hemi.groundColor.setHex(on ? 0x1a1612 : DAY.hemi[1]); hemi.intensity = on ? 0.35 : DAY.hemi[2];
-  sun.color.setHex(on ? 0x9db2ff : DAY.sun[0]); sun.intensity = on ? 0.35 : DAY.sun[1];
+  hemi.color.setHex(on ? 0x3a4a78 : DAY.hemi[0]); hemi.groundColor.setHex(on ? 0x1a1612 : DAY.hemi[1]); hemi.intensity = on ? 0.6 : DAY.hemi[2];
+  sun.color.setHex(on ? 0x9db2ff : DAY.sun[0]); sun.intensity = on ? 1.2 : DAY.sun[1];
   MAT.win.emissiveIntensity = MAT.shop.emissiveIntensity = on ? 1 : 0;
   MAT.col.emissiveIntensity = on ? 0.6 : 0; MV.m.emissiveIntensity = on ? 0.15 : 0; MV.g.emissiveIntensity = on ? 5 : 1;
   NIGHT.frame = 0; renderer.shadowMap.needsUpdate = true;
@@ -1259,7 +1279,12 @@ renderer.setAnimationLoop(() => {
   fps.n++; const now = performance.now();
   if (now - fps.t0 >= 500) { fpsEl.textContent = `${Math.round(fps.n * 1000 / (now - fps.t0))} fps`; fps.n = 0; fps.t0 = now; }
   perf.dtS += (dt - perf.dtS) * 0.15;                          // smoothed frame time: one late frame doesn't make the rider jump
-  if (ride.on) rideStep(perf.dtS); else controls.update();
+  if (ride.on) rideStep(perf.dtS);
+  else {
+    controls.update();
+    const lift = gh(camera.position.x, -camera.position.z) + 2 - camera.position.y;   // looking up from street level: raise camera and target together
+    if (lift > 0) { camera.position.y += lift; controls.target.y += lift; }
+  }
   // adaptive resolution: keep ~60 fps by trading pixel ratio between 1 and the display's native ratio
   // resizing the drawing buffer costs a frame, so step down only after two slow windows, step up only after
   // five fast ones, and never step up during the ride (an oscillating resolution shows up as periodic jerks)
