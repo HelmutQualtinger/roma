@@ -1,6 +1,6 @@
 # Kolosseum 3D
 
-Ein Three.js-Modell der Innenstadt von Rom auf einer einzigen Seite: ein Ausschnitt von 2 × 2 km rund um das Kolosseum, erstellt aus OpenStreetMap-Daten und SRTM-Geländedaten. Es enthält ein prozedural erzeugtes Kolosseum und Vittoriano sowie eine animierte Radfahrt von der Piazza Venezia über die Via dei Fori Imperiali, um das Kolosseum herum und zurück. Eine Anzeige zeigt dabei Steigung, Geschwindigkeit, Leistung und Höhe.
+Ein Three.js-Modell der Innenstadt von Rom auf einer einzigen Seite: ein Ausschnitt von 2 × 2 km rund um das Kolosseum, erstellt aus OpenStreetMap-Daten und SRTM-Geländedaten. Es enthält ein prozedural erzeugtes Kolosseum und Vittoriano sowie eine animierte Radfahrt von der Piazza Venezia über den Circo Massimo, um das Kolosseum herum und über die Via dei Fori Imperiali zurück. Die Route ist als Neonlinie auf dem Boden eingezeichnet. Eine Anzeige zeigt dabei Steigung, Geschwindigkeit, Leistung und Höhe.
 
 ![Übersicht des Modells](docs/ge.png)
 
@@ -25,11 +25,12 @@ Die Schaltflächen oben bieten:
 | Beschriftung | Beschriftungen ein- und ausblenden |
 | Radfahrt ▶ | Radfahrt starten |
 | Route | Routenlinie ein- und ausblenden |
+| Nacht | Nachtmodus mit Sternenhimmel, Mond, Straßenlaternen, beleuchteten Fenstern und angestrahlten Monumenten |
 | Kamera | Kameramodus der Radfahrt wechseln |
 | Tempo | Abspielgeschwindigkeit der Radfahrt |
 | Screenshot 4K / 8K | Bild in hoher Auflösung speichern |
 
-Ein URL-Hash öffnet eine Ansicht direkt: `#ge`, `#close`, `#venezia`, `#arco`, `#top`. `?t=<Sekunden>#ride` startet die Radfahrt und spult sie um die angegebene Zeit vor.
+Ein URL-Hash öffnet eine Ansicht direkt: `#ge`, `#close`, `#venezia`, `#arco`, `#top`. `?t=<Sekunden>#ride` startet die Radfahrt und spult sie um die angegebene Zeit vor. `?night` schaltet den Nachtmodus ein, `?info` gibt Draw Calls und Dreiecke in der Browser-Konsole aus.
 
 ## Daten neu erzeugen
 

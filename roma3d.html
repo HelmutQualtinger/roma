@@ -15,6 +15,7 @@
   #prof { display: block; margin-top: 6px; width: 236px; height: 64px; }
   @media (max-width: 640px) { #ui { max-width: calc(100% - 24px); } #stats { top: auto; bottom: 84px; } }
   #ui button { font: 13px/1 -apple-system, system-ui, sans-serif; padding: 8px 11px; border: 1px solid rgba(0,0,0,.15); border-radius: 6px; background: rgba(255,255,255,.88); color: #222; cursor: pointer; }
+  #ui select { font: 13px/1 -apple-system, system-ui, sans-serif; padding: 0 6px; border: 1px solid rgba(0,0,0,.15); border-radius: 6px; background: rgba(255,255,255,.88); color: #222; cursor: pointer; }
   #ui button:hover { background: #fff; }
   #ui button.on { background: #2f3b48; color: #fff; }
   #info { position: fixed; left: 12px; bottom: 10px; font-size: 12px; color: #333; background: rgba(255,255,255,.75); padding: 5px 9px; border-radius: 5px; }
@@ -33,33 +34,98 @@
 </script>
 </head>
 <body>
-<div id="load">Szene wird aufgebaut …</div>
+<div id="load" data-i18n="load">Szene wird aufgebaut …</div>
 <div id="ui">
-  <button data-view="ge">Google-Earth-Ansicht</button>
-  <button data-view="close">Kolosseum nah</button>
+  <button data-view="ge" data-i18n="v.ge">Google-Earth-Ansicht</button>
+  <button data-view="close" data-i18n="v.close">Kolosseum nah</button>
   <button data-view="venezia">Piazza Venezia</button>
-  <button data-view="arco">Konstantinsbogen</button>
-  <button data-view="top">Draufsicht</button>
-  <button id="rot">Rundflug</button>
-  <button id="lab" class="on">Beschriftung</button>
-  <button id="ride">Radfahrt ▶</button>
-  <button id="routeBtn" class="on">Route</button>
-  <button id="camMode">Kamera: hinter Rad</button>
-  <label id="spd">Tempo <input id="speed" type="range" min="1" max="10" step="1" value="3"></label>
+  <button data-view="arco" data-i18n="v.arco">Konstantinsbogen</button>
+  <button data-view="top" data-i18n="v.top">Draufsicht</button>
+  <button id="rot" data-i18n="rot">Rundflug</button>
+  <button id="lab" class="on" data-i18n="lab">Beschriftung</button>
+  <button id="ride" data-i18n="ride.play">Radfahrt ▶</button>
+  <button id="routeBtn" class="on" data-i18n="route">Route</button>
+  <button id="nightBtn" data-i18n="night">Nacht</button>
+  <button id="camMode" data-i18n="cam.chase">Kamera: hinter Rad</button>
+  <label id="spd"><span data-i18n="speed">Tempo</span> <input id="speed" type="range" min="1" max="10" step="1" value="3"></label>
   <button id="shot">Screenshot 4K</button>
   <button id="shot8">Screenshot 8K</button>
+  <select id="lang" aria-label="Sprache / Language"><option value="de">DE</option><option value="en">EN</option><option value="it">IT</option><option value="fr">FR</option></select>
 </div>
 <div id="labels"></div>
 <div id="hud" style="display:none"></div>
 <div id="fps">– fps</div>
 <div id="stats" style="display:none">
-  <div class="st"><span>Steigung</span><b id="sGrade">0,0 %</b></div>
-  <div class="st"><span>Geschwindigkeit</span><b id="sSpeed">0,0 km/h</b></div>
-  <div class="st"><span>Leistung</span><b id="sPower">0 W</b></div>
-  <div class="st"><span>Höhe</span><b id="sAlt">0 m</b></div>
+  <div class="st"><span data-i18n="s.grade">Steigung</span><b id="sGrade">0,0 %</b></div>
+  <div class="st"><span data-i18n="s.speed">Geschwindigkeit</span><b id="sSpeed">0,0 km/h</b></div>
+  <div class="st"><span data-i18n="s.power">Leistung</span><b id="sPower">0 W</b></div>
+  <div class="st"><span data-i18n="s.alt">Höhe</span><b id="sAlt">0 m</b></div>
   <canvas id="prof" width="236" height="64"></canvas>
 </div>
-<div id="info">Kolosseum, Rom · Ausschnitt 2 × 2 km · Gebäude, Straßen, Grünflächen © OpenStreetMap-Mitwirkende (ODbL)</div>
+<div id="info" data-i18n="info">Kolosseum, Rom · Ausschnitt 2 × 2 km · Gebäude, Straßen, Grünflächen © OpenStreetMap-Mitwirkende (ODbL)</div>
+
+<script>
+// ---------- UI languages ----------
+// Static text carries data-i18n keys; dynamic text uses tr()/setT(). Choice: ?lang=xx, then the saved choice, then the browser language, else German.
+const I18N = {
+  de: {
+    title: 'Kolosseum 3D', load: 'Szene wird aufgebaut …',
+    'v.ge': 'Google-Earth-Ansicht', 'v.close': 'Kolosseum nah', 'v.arco': 'Konstantinsbogen', 'v.top': 'Draufsicht',
+    rot: 'Rundflug', lab: 'Beschriftung', 'ride.play': 'Radfahrt ▶', 'ride.pause': 'Radfahrt ❚❚', 'ride.again': 'Radfahrt ↻',
+    route: 'Route', night: 'Nacht', 'cam.chase': 'Kamera: hinter Rad', 'cam.drone': 'Kamera: Drohne', speed: 'Tempo',
+    's.grade': 'Steigung', 's.speed': 'Geschwindigkeit', 's.power': 'Leistung', 's.alt': 'Höhe',
+    info: 'Kolosseum, Rom · Ausschnitt 2 × 2 km · Gebäude, Straßen, Grünflächen © OpenStreetMap-Mitwirkende (ODbL)',
+    'where.col': 'Rund um das Kolosseum', timelapse: 'Zeitraffer',
+    'l.Kolosseum': 'Kolosseum', 'l.Konstantinsbogen': 'Konstantinsbogen', 'l.Forum Romanum': 'Forum Romanum', 'l.Palatin': 'Palatin',
+    'l.Tempel der Venus und Roma': 'Tempel der Venus und Roma', 'l.Circus Maximus': 'Circus Maximus', 'l.Kaiserforen': 'Kaiserforen', 'l.Celio': 'Celio',
+  },
+  en: {
+    title: 'Colosseum 3D', load: 'Building scene …',
+    'v.ge': 'Google Earth view', 'v.close': 'Colosseum close-up', 'v.arco': 'Arch of Constantine', 'v.top': 'Top view',
+    rot: 'Orbit', lab: 'Labels', 'ride.play': 'Bike ride ▶', 'ride.pause': 'Bike ride ❚❚', 'ride.again': 'Bike ride ↻',
+    route: 'Route', night: 'Night', 'cam.chase': 'Camera: behind bike', 'cam.drone': 'Camera: drone', speed: 'Speed',
+    's.grade': 'Gradient', 's.speed': 'Speed', 's.power': 'Power', 's.alt': 'Altitude',
+    info: 'Colosseum, Rome · 2 × 2 km area · Buildings, roads, green spaces © OpenStreetMap contributors (ODbL)',
+    'where.col': 'Around the Colosseum', timelapse: 'Time-lapse',
+    'l.Kolosseum': 'Colosseum', 'l.Konstantinsbogen': 'Arch of Constantine', 'l.Forum Romanum': 'Roman Forum', 'l.Palatin': 'Palatine Hill',
+    'l.Tempel der Venus und Roma': 'Temple of Venus and Roma', 'l.Circus Maximus': 'Circus Maximus', 'l.Kaiserforen': 'Imperial Fora', 'l.Celio': 'Caelian Hill',
+  },
+  it: {
+    title: 'Colosseo 3D', load: 'Costruzione della scena …',
+    'v.ge': 'Vista Google Earth', 'v.close': 'Colosseo da vicino', 'v.arco': 'Arco di Costantino', 'v.top': 'Vista dall’alto',
+    rot: 'Volo circolare', lab: 'Etichette', 'ride.play': 'Giro in bici ▶', 'ride.pause': 'Giro in bici ❚❚', 'ride.again': 'Giro in bici ↻',
+    route: 'Percorso', night: 'Notte', 'cam.chase': 'Camera: dietro la bici', 'cam.drone': 'Camera: drone', speed: 'Velocità',
+    's.grade': 'Pendenza', 's.speed': 'Velocità', 's.power': 'Potenza', 's.alt': 'Altitudine',
+    info: 'Colosseo, Roma · Area di 2 × 2 km · Edifici, strade, aree verdi © Collaboratori di OpenStreetMap (ODbL)',
+    'where.col': 'Intorno al Colosseo', timelapse: 'Accelerazione',
+    'l.Kolosseum': 'Colosseo', 'l.Konstantinsbogen': 'Arco di Costantino', 'l.Forum Romanum': 'Foro Romano', 'l.Palatin': 'Palatino',
+    'l.Tempel der Venus und Roma': 'Tempio di Venere e Roma', 'l.Circus Maximus': 'Circo Massimo', 'l.Kaiserforen': 'Fori Imperiali', 'l.Celio': 'Celio',
+  },
+  fr: {
+    title: 'Colisée 3D', load: 'Construction de la scène …',
+    'v.ge': 'Vue Google Earth', 'v.close': 'Colisée de près', 'v.arco': 'Arc de Constantin', 'v.top': 'Vue de dessus',
+    rot: 'Survol', lab: 'Étiquettes', 'ride.play': 'Balade à vélo ▶', 'ride.pause': 'Balade à vélo ❚❚', 'ride.again': 'Balade à vélo ↻',
+    route: 'Itinéraire', night: 'Nuit', 'cam.chase': 'Caméra : derrière le vélo', 'cam.drone': 'Caméra : drone', speed: 'Vitesse',
+    's.grade': 'Pente', 's.speed': 'Vitesse', 's.power': 'Puissance', 's.alt': 'Altitude',
+    info: 'Colisée, Rome · Zone de 2 × 2 km · Bâtiments, routes, espaces verts © Contributeurs d’OpenStreetMap (ODbL)',
+    'where.col': 'Autour du Colisée', timelapse: 'Accéléré',
+    'l.Kolosseum': 'Colisée', 'l.Konstantinsbogen': 'Arc de Constantin', 'l.Forum Romanum': 'Forum romain', 'l.Palatin': 'Mont Palatin',
+    'l.Tempel der Venus und Roma': 'Temple de Vénus et de Rome', 'l.Circus Maximus': 'Cirque Maxime', 'l.Kaiserforen': 'Forums impériaux', 'l.Celio': 'Mont Cælius',
+  },
+};
+const LOCALE = { de: 'de-DE', en: 'en-GB', it: 'it-IT', fr: 'fr-FR' };
+const pickLang = (...c) => c.find(l => l in I18N);
+let LANG = pickLang(new URLSearchParams(location.search).get('lang'), (() => { try { return localStorage.getItem('lang'); } catch { } })(),
+  ...navigator.languages.map(l => l.slice(0, 2)), 'de');
+const tr = k => I18N[LANG][k] ?? I18N.de[k] ?? k;
+const setT = (el, k) => { el.dataset.i18n = k; el.textContent = tr(k); };
+function applyLang(l) {
+  LANG = l; document.documentElement.lang = l; document.title = tr('title'); document.getElementById('lang').value = l;
+  document.querySelectorAll('[data-i18n]').forEach(el => el.textContent = tr(el.dataset.i18n));
+}
+document.getElementById('lang').onchange = e => { applyLang(e.target.value); try { localStorage.setItem('lang', LANG); } catch { } };
+applyLang(LANG);
+</script>
 
 <script type="module">
 import * as THREE from 'three';
@@ -99,7 +165,8 @@ const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true; controls.maxPolarAngle = THREE.MathUtils.degToRad(86);
 controls.minDistance = 25; controls.maxDistance = 5000; controls.autoRotateSpeed = 0.6;
 
-scene.add(new THREE.HemisphereLight(0xe3edff, 0x8f8068, 1.25));
+const hemi = new THREE.HemisphereLight(0xe3edff, 0x8f8068, 1.25);
+scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xfff0da, 2.7);
 sun.position.set(-650, 900, 750);
 sun.castShadow = true;
@@ -938,7 +1005,7 @@ const profBase = (() => {                                       // static profil
   g.fillText(`${Math.round(hi + BASE)} m`, 4, 12); g.fillText(`${Math.round(lo + BASE)} m`, 4, h - 4);
   return { c, X, Y };
 })();
-const fmt = (v, d = 0) => v.toLocaleString('de-DE', { minimumFractionDigits: d, maximumFractionDigits: d });
+const fmt = (v, d = 0) => v.toLocaleString(LOCALE[LANG], { minimumFractionDigits: d, maximumFractionDigits: d });
 function updateStats(grade, v, P, alt) {
   STAT.grade.textContent = `${grade > 0.0005 ? '+' : ''}${fmt(grade * 100, 1)} %`;
   STAT.grade.style.color = grade > 0.03 ? '#ff9b7a' : grade < -0.03 ? '#8fd18f' : '';
@@ -979,10 +1046,10 @@ function rideStep(dt) {
   updateStats(grade, ride.v, P, p.y - 0.33 + BASE);
   const dCol = Math.hypot(p.x, p.z), [vx, vd] = vitLocal(p.x, -p.z);
   const [qx, qy] = [p.x, -p.z], dCirc = Math.hypot(qx + 605, qy + 468);
-  const where = dCol < 190 ? 'Rund um das Kolosseum' : vd < 40 && Math.abs(vx) < 160 ? 'Piazza Venezia · Altare della Patria'
+  const where = dCol < 190 ? tr('where.col') : vd < 40 && Math.abs(vx) < 160 ? 'Piazza Venezia · Altare della Patria'
     : dCirc < 330 ? 'Circo Massimo' : qx < -820 ? 'Via del Teatro di Marcello' : qy < -150 && qx > -330 ? 'Via di San Gregorio'
     : qy < 150 && qx < -600 ? 'Via Petroselli · Bocca della Verità' : 'Via dei Fori Imperiali';
-  hud.textContent = `${where} · ${fmt(ride.s / 1000, 2)} / ${fmt(ROUTE_LEN / 1000, 2)} km · Zeitraffer × ${ride.mult}`;
+  hud.textContent = `${where} · ${fmt(ride.s / 1000, 2)} / ${fmt(ROUTE_LEN / 1000, 2)} km · ${tr('timelapse')} × ${ride.mult}`;
   if (ride.s >= ROUTE_LEN) { stopRide(true); view('venezia'); }
 }
 function startRide() {
@@ -991,15 +1058,15 @@ function startRide() {
     ride.camYaw = ride.heading + Math.PI; ride.camD = 14; ride.camH = 4;   // start in front of the rider, then swing behind
   }
   ride.on = true; bike.visible = true; routeLine.getObjectByName('overview').visible = false; camera.fov = 62; camera.near = 0.5; camera.far = 2600; scene.fog.near = 700; scene.fog.far = 2500; camera.updateProjectionMatrix(); controls.enabled = false; controls.autoRotate = false; tween = null;
-  hud.style.display = ''; document.getElementById('stats').style.display = ''; document.getElementById('ride').classList.add('on'); document.getElementById('ride').textContent = 'Radfahrt ❚❚';
+  hud.style.display = ''; document.getElementById('stats').style.display = ''; document.getElementById('ride').classList.add('on'); setT(document.getElementById('ride'), 'ride.pause');
 }
 function stopRide(done = false) {
   ride.on = false; controls.enabled = true; routeLine.getObjectByName('overview').visible = true; setShadow('overview'); camera.fov = 35; camera.near = 3; camera.far = 9000; scene.fog.near = 2200; scene.fog.far = 6500; camera.updateProjectionMatrix(); controls.target.copy(bike.position); controls.update();
-  document.getElementById('ride').classList.remove('on'); document.getElementById('ride').textContent = done ? 'Radfahrt ↻' : 'Radfahrt ▶';
+  document.getElementById('ride').classList.remove('on'); setT(document.getElementById('ride'), done ? 'ride.again' : 'ride.play');
 }
 document.getElementById('routeBtn').onclick = e => { routeLine.visible = !routeLine.visible; e.target.classList.toggle('on', routeLine.visible); };
 document.getElementById('ride').onclick = () => ride.on ? stopRide() : startRide();
-document.getElementById('camMode').onclick = e => { ride.cam = ride.cam === 'chase' ? 'drone' : 'chase'; e.target.textContent = ride.cam === 'chase' ? 'Kamera: hinter Rad' : 'Kamera: Drohne'; };
+document.getElementById('camMode').onclick = e => { ride.cam = ride.cam === 'chase' ? 'drone' : 'chase'; setT(e.target, ride.cam === 'chase' ? 'cam.chase' : 'cam.drone'); };
 
 // ---------- labels ----------
 const LABELS = [
@@ -1009,7 +1076,7 @@ const LABELS = [
   ['Kaiserforen', 41.89430, 12.48700, 30], ['Celio', 41.88570, 12.49380, 30],
 ].map(([name, lat, lon, h]) => {
   const [x, y] = ll(lat, lon), el = document.createElement('div');
-  el.textContent = name; document.getElementById('labels').appendChild(el);
+  if (I18N.de['l.' + name]) setT(el, 'l.' + name); else el.textContent = name; document.getElementById('labels').appendChild(el);
   return { el, p: new THREE.Vector3(x, gh(x, y) + h, -y) };
 });
 let showLabels = true;
@@ -1056,9 +1123,117 @@ function onResize() {
 }
 addEventListener('resize', onResize);
 
-for (const o of scene.children) if (o !== bike && o !== sun && o !== sun.target)
+// ---------- night mode: starry sky, moonlight, street lamps, lit windows and floodlit monuments ----------
+const NIGHT = { on: false, objs: new THREE.Group() };
+{
+  // lit windows / shop fronts: emissive maps aligned with the window and shop textures
+  const glow = (w, h, draw) => { const t = tex(w, h, (c, W2, H2) => { c.fillStyle = '#000'; c.fillRect(0, 0, W2, H2); draw(c); }); return t; };
+  const warm = () => `hsl(${32 + rnd() * 14}, ${70 + rnd() * 25}%, ${55 + rnd() * 20}%)`;
+  MAT.win.emissiveMap = glow(512, 512, c => {
+    for (let r = 0; r < 4; r++) for (let q = 0; q < 4; q++) if (rnd() < 0.38) { c.fillStyle = rnd() < 0.1 ? '#9fb8ff' : warm(); c.fillRect(q * 128 + 40, r * 128 + 25, 48, 78); }
+  });
+  MAT.shop.emissiveMap = glow(512, 128, c => {
+    for (let q = 0; q < 4; q++) if (rnd() < 0.55) { c.fillStyle = warm(); c.beginPath(); c.moveTo(q * 128 + 24, 128); c.lineTo(q * 128 + 24, 52); c.arc(q * 128 + 64, 52, 40, Math.PI, 2 * Math.PI); c.lineTo(q * 128 + 104, 128); c.fill(); }
+  });
+  for (const m of [MAT.win, MAT.shop]) { m.emissive = new THREE.Color(1, 1, 1); m.emissiveIntensity = 0; m.needsUpdate = true; }
+  MAT.col.emissiveMap = colTex; MAT.col.emissive = new THREE.Color(0xffb86a); MAT.col.emissiveIntensity = 0; MAT.col.needsUpdate = true;
+  MV.m.emissiveMap = marbleTex; MV.m.emissive = new THREE.Color(0xfff0dc); MV.m.emissiveIntensity = 0; MV.m.needsUpdate = true;
+
+  // night sky: gradient with city glow at the horizon, stars and moon on a dome that travels with the camera
+  const ns = document.createElement('canvas'); ns.width = 2; ns.height = 256;
+  const ng = ns.getContext('2d'), gr = ng.createLinearGradient(0, 0, 0, 256);
+  gr.addColorStop(0, '#02040d'); gr.addColorStop(0.6, '#0b1430'); gr.addColorStop(0.9, '#2a2840'); gr.addColorStop(1, '#4a3a3a');
+  ng.fillStyle = gr; ng.fillRect(0, 0, 2, 256);
+  NIGHT.sky = new THREE.CanvasTexture(ns); NIGHT.sky.colorSpace = THREE.SRGBColorSpace;
+  const N = 5000, sp = new Float32Array(N * 3), sc = new Float32Array(N * 3), col = new THREE.Color();
+  for (let i = 0; i < N; i++) {
+    const z = 0.04 + rnd() * 0.96, a = rnd() * 6.2832, r = Math.sqrt(1 - z * z);    // upper hemisphere only
+    sp.set([Math.cos(a) * r * 2000, z * 2000, Math.sin(a) * r * 2000], i * 3);
+    col.setHSL(0.58 + (rnd() - 0.5) * 0.15, 0.3, 0.55 + rnd() ** 3 * 0.45).toArray(sc, i * 3);
+  }
+  const sg = new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(sp, 3)).setAttribute('color', new THREE.BufferAttribute(sc, 3));
+  const dot = tex(32, 32, (c) => { const g2 = c.createRadialGradient(16, 16, 0, 16, 16, 16); g2.addColorStop(0, 'rgba(255,255,255,1)'); g2.addColorStop(0.35, 'rgba(255,255,255,.6)'); g2.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = g2; c.fillRect(0, 0, 32, 32); });
+  NIGHT.dome = new THREE.Group();
+  NIGHT.dome.add(new THREE.Points(sg, new THREE.PointsMaterial({ size: 2.2, sizeAttenuation: false, map: dot, vertexColors: true, transparent: true, depthWrite: false, fog: false, toneMapped: false })));
+  const moonDir = SUN_DIR.clone();                                 // moonlight comes from the same side as the sun's shadows
+  const moon = new THREE.Mesh(new THREE.CircleGeometry(38, 48), new THREE.MeshBasicMaterial({ color: 0xf4f1e4, fog: false, toneMapped: false, map: tex(128, 128, c => {
+    c.fillStyle = '#fff'; c.fillRect(0, 0, 128, 128);
+    for (let i = 0; i < 18; i++) { c.fillStyle = `rgba(150,150,160,${0.15 + rnd() * 0.2})`; c.beginPath(); c.arc(rnd() * 128, rnd() * 128, 4 + rnd() * 16, 0, 7); c.fill(); }
+  }) }));
+  moon.position.copy(moonDir).multiplyScalar(1900); moon.lookAt(0, 0, 0);
+  NIGHT.dome.add(moon);
+  NIGHT.dome.children.forEach(o => o.renderOrder = -1);
+  NIGHT.objs.add(NIGHT.dome);
+
+  // street lamps along car roads every ~32 m, alternating sides; posts + glowing lanterns + light pools on the ground
+  const L = [];
+  for (const r of S.roads) {
+    if (r.s) continue;
+    let acc = 16, side = 1;
+    for (let i = 0; i < r.p.length - 2; i += 2) {
+      const x0 = r.p[i], y0 = r.p[i + 1], x1 = r.p[i + 2], y1 = r.p[i + 3], len = Math.hypot(x1 - x0, y1 - y0); if (len < 0.01) continue;
+      for (let d = 32 - acc; d < len; d += 32) {
+        const t = d / len, nx = -(y1 - y0) / len, ny = (x1 - x0) / len, off = r.w / 2 + 1.2;
+        const x = x0 + (x1 - x0) * t + nx * off * side, y = y0 + (y1 - y0) * t + ny * off * side;
+        const [vx, vd] = vitLocal(x, y);
+        if (Math.abs(x) < TR.half - 20 && Math.abs(y) < TR.half - 20 && !inCol(x, y) && !(Math.abs(vx) < 62 && vd > -42 && vd < 120)) L.push([x, y, -nx * side, -ny * side]);
+        side = -side;
+      }
+      acc = (acc + len) % 32;
+    }
+  }
+  NIGHT.lamps = L.map(([x, y]) => new THREE.Vector3(x, gh(x, y) + 6.4, -y));
+  const n = L.length, o = new THREE.Object3D(), up = new THREE.Vector3(0, 1, 0), nrm = new THREE.Vector3();
+  const post = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.07, 0.11, 1, 6).translate(0, 0.5, 0), new THREE.MeshLambertMaterial({ color: 0x2b2d2f }), n);
+  const arm = new THREE.InstancedMesh(new THREE.BoxGeometry(0.06, 0.06, 1.2).translate(0, 0, 0.6), new THREE.MeshLambertMaterial({ color: 0x2b2d2f }), n);
+  const head = new THREE.InstancedMesh(new THREE.SphereGeometry(0.28, 10, 8), new THREE.MeshBasicMaterial({ color: 0x5a5040 }), n);
+  const poolTex = tex(128, 128, c => { const g2 = c.createRadialGradient(64, 64, 0, 64, 64, 64); g2.addColorStop(0, 'rgba(255,196,120,.85)'); g2.addColorStop(0.45, 'rgba(255,170,90,.35)'); g2.addColorStop(1, 'rgba(255,150,70,0)'); c.fillStyle = g2; c.fillRect(0, 0, 128, 128); });
+  const pool = new THREE.InstancedMesh(new THREE.PlaneGeometry(16, 16).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: poolTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, polygonOffset: true, polygonOffsetFactor: -6, polygonOffsetUnits: -10 }), n);
+  L.forEach(([x, y, dx, dy], i) => {
+    const g0 = gh(x, y), yaw = Math.atan2(dx, -dy);              // arm reaches over the road
+    o.position.set(x, g0, -y); o.rotation.set(0, 0, 0); o.scale.set(1, 6.6, 1); o.updateMatrix(); post.setMatrixAt(i, o.matrix);
+    o.position.set(x, g0 + 6.5, -y); o.rotation.set(0, yaw, 0); o.scale.set(1, 1, 1); o.updateMatrix(); arm.setMatrixAt(i, o.matrix);
+    const hx = x + dx * 1.2, hy = y + dy * 1.2;
+    o.position.set(hx, g0 + 6.3, -hy); o.rotation.set(0, 0, 0); o.updateMatrix(); head.setMatrixAt(i, o.matrix);
+    NIGHT.lamps[i].set(hx, g0 + 6.3, -hy);
+    const gx = (gh(hx + 2, hy) - gh(hx - 2, hy)) / 4, gy = (gh(hx, hy + 2) - gh(hx, hy - 2)) / 4;
+    o.position.set(hx, gh(hx, hy) + 0.5, -hy); o.quaternion.setFromUnitVectors(up, nrm.set(-gx, 1, gy).normalize()); o.updateMatrix(); pool.setMatrixAt(i, o.matrix);
+  });
+  for (const m of [post, arm, head, pool]) { m.computeBoundingSphere(); scene.add(m); }
+  pool.renderOrder = 3; pool.visible = false;
+  NIGHT.head = head; NIGHT.pool = pool;
+  // a few real point lights follow the camera's focus and light the nearest lamps' surroundings (bike, facades)
+  NIGHT.lights = Array.from({ length: 6 }, () => { const l = new THREE.PointLight(0xffb566, 90, 45, 2); NIGHT.objs.add(l); return l; });
+  NIGHT.objs.visible = false;
+  scene.add(NIGHT.objs);
+}
+const DAY = { bg: scene.background, fog: scene.fog.color.getHex(), hemi: [hemi.color.getHex(), hemi.groundColor.getHex(), hemi.intensity], sun: [sun.color.getHex(), sun.intensity] };
+function setNight(on) {
+  NIGHT.on = on; NIGHT.objs.visible = on; NIGHT.pool.visible = on;
+  NIGHT.head.material.color.setHex(on ? 0xffd9a0 : 0x5a5040); NIGHT.head.material.toneMapped = !on; NIGHT.head.material.needsUpdate = true;
+  scene.background = on ? NIGHT.sky : DAY.bg;
+  scene.fog.color.setHex(on ? 0x0d1324 : DAY.fog);
+  hemi.color.setHex(on ? 0x3a4a78 : DAY.hemi[0]); hemi.groundColor.setHex(on ? 0x1a1612 : DAY.hemi[1]); hemi.intensity = on ? 0.35 : DAY.hemi[2];
+  sun.color.setHex(on ? 0x9db2ff : DAY.sun[0]); sun.intensity = on ? 0.35 : DAY.sun[1];
+  MAT.win.emissiveIntensity = MAT.shop.emissiveIntensity = on ? 1 : 0;
+  MAT.col.emissiveIntensity = on ? 0.6 : 0; MV.m.emissiveIntensity = on ? 0.15 : 0; MV.g.emissiveIntensity = on ? 5 : 1;
+  NIGHT.frame = 0; renderer.shadowMap.needsUpdate = true;
+  document.getElementById('nightBtn').classList.toggle('on', on);
+}
+const _focus = new THREE.Vector3();
+function nightStep() {                                             // stars follow the camera; point lights hop to the lamps nearest the focus
+  NIGHT.dome.position.copy(camera.position); NIGHT.dome.updateMatrixWorld(true);
+  if (NIGHT.frame++ % 10) return;
+  _focus.copy(ride.on ? bike.position : controls.target);
+  const near = NIGHT.lamps.map((p, i) => [p.distanceToSquared(_focus), i]).sort((a, b) => a[0] - b[0]);
+  NIGHT.lights.forEach((l, k) => { l.position.copy(NIGHT.lamps[near[k][1]]); l.updateMatrixWorld(); });
+}
+document.getElementById('nightBtn').onclick = () => setNight(!NIGHT.on);
+
+for (const o of scene.children) if (o !== bike && o !== sun && o !== sun.target && o !== NIGHT.objs)
   o.traverse(c => { c.updateMatrix(); c.updateMatrixWorld(true); c.matrixAutoUpdate = false; c.matrixWorldAutoUpdate = false; });
 view(VIEWS[location.hash.slice(1)] ? location.hash.slice(1) : 'ge', true);
+if (location.search.includes('night')) setNight(true);
 document.getElementById('load').remove();
 window.__ready = true;
 const INFO = location.search.includes('info') && { f: 0 };
@@ -1089,6 +1264,7 @@ renderer.setAnimationLoop(() => {
   }
   renderer.render(scene, camera);
   updateLabels();
+  if (NIGHT.on) nightStep();
   if (INFO && ++INFO.f === 3) console.log('INFO ' + JSON.stringify({ ...renderer.info.render, pr: renderer.getPixelRatio() }));
 });
 </script>

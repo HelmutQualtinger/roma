@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A single-page Three.js 3D model of central Rome: a 2 × 2 km area around the Colosseum, built from OpenStreetMap data and SRTM terrain. It contains a procedural Colosseum, a procedural Vittoriano (Altare della Patria) and an animated bike ride: Piazza Venezia → Circo Massimo → around the Colosseum → Via dei Fori Imperiali → back, drawn on the ground as a neon line. During the ride a HUD shows gradient, speed, power and altitude. UI text is in German.
+A single-page Three.js 3D model of central Rome: a 2 × 2 km area around the Colosseum, built from OpenStreetMap data and SRTM terrain. It contains a procedural Colosseum, a procedural Vittoriano (Altare della Patria) and an animated bike ride: Piazza Venezia → Circo Massimo → around the Colosseum → Via dei Fori Imperiali → back, drawn on the ground as a neon line. During the ride a HUD shows gradient, speed, power and altitude. The UI is available in German, English, Italian and French: the `I18N` table in the classic script before the module holds every string. Static elements carry `data-i18n` keys, and dynamic text uses `tr()` or `setT()`. The language comes from `?lang=de|en|it|fr`, then the saved choice (`localStorage`), then the browser language, and falls back to German.
 
 ## Commands
 
@@ -52,4 +52,5 @@ Everything is one module script, split into sections marked `// ---------- … -
   - The camera is rigidly offset from the rider. Only its yaw trails the heading, so the distance stays constant.
   - The elevation and grade profiles (`PROF`/`GRADE`, 2 m samples) feed the HUD (`#stats`, `#prof` canvas).
 - **Rendering cost:** the city uses `MeshLambertMaterial` (`lam()`). `MeshStandardMaterial` (`mat()`) is kept only for marble, gold and bronze. There is no logarithmic depth buffer; instead the camera near/far and the fog switch between overview (3–9000 m) and ride (0.5–2600 m), and roads use `polygonOffset`. Static scene objects have `matrixAutoUpdate` off. Only the bike, the sun and the camera update their matrices.
+- **Night mode:** `setNight()` swaps the sky, fog and lights, and switches on emissive maps: lit windows and shops on `MAT.win`/`MAT.shop`, a floodlit Colosseum on `MAT.col`, and the Vittoriano and arch marble on `MV.m`. Street lamps are instanced every ~32 m along car roads, with additive light pools on the ground. Six real `PointLight`s hop to the lamps nearest the focus every 10 frames (`nightStep`). The star dome follows the camera. `NIGHT.objs` is dynamic, so it is excluded from the static matrix freeze.
 - **Performance:** adaptive pixel ratio (between 1 and the device pixel ratio, targeting about 60 fps) and the FPS counter (`#fps`) live in the animation loop. The screenshot buttons render at 4K/8K with pixel ratio 1.
