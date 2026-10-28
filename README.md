@@ -8,6 +8,10 @@ Ein Three.js-Modell der Innenstadt von Rom auf einer einzigen Seite: ein Ausschn
 
 ## Starten
 
+Online: **https://helmutqualtinger.github.io/roma/** (z. B. `?lang=en`, `#ride`, `?night`)
+
+Lokal:
+
 ```
 open roma3d.html
 ```
