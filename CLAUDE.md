@@ -50,7 +50,12 @@ Everything is one module script, split into sections marked `// ---------- … -
   - `placeBike` derives the heading from a ±2 m chord, smooths it, and sets lean (v²κ/g) and pitch (grade).
   - `rideStep` integrates speed from power: `PHYS`, `powerAt()`, 190 W target, coasting and braking near `vMax`.
   - The camera is rigidly offset from the rider. Only its yaw trails the heading, so the distance stays constant.
-  - A procedural lion (`lion`, `lionStep(sim)`, state in `LION`) gallops 3.4–4.6 m behind the rider, offset ~0.75 m sideways. Its legs use two-bone IK with paws planted in stance (rotary gallop, duty factor falls with speed). It is excluded from the static matrix freeze. The chase camera sits 9.5 m back so both stay in frame.
+  - A procedural lion (`lion`, `lionStep(sim)`, state in `LION`) gallops 3.4–4.6 m behind the rider, offset ~0.75 m sideways. Its legs use two-bone IK with paws planted in stance (rotary gallop, duty factor falls with speed). The fur has three parts:
+    - shell fur: `addShells()` adds an `InstancedMesh` of 6 shells per furred mesh, using an object-space hash and discard. Shells are hidden when the camera is more than 30 m away.
+    - mane, chest, elbow and tail clumps: alpha-tested ribbons (`hairGeo`, `mHair`).
+    - face details: whiskers, lips and rimmed eyes.
+
+    The lion is excluded from the static matrix freeze. The chase camera sits 9.5 m back so both stay in frame. The drone camera circles the rider and the lion once every 36 s (`ride.orbit`). `ride.dr` blends between the chase and drone cameras, and `?drone` starts the ride in drone mode.
   - The elevation and grade profiles (`PROF`/`GRADE`, 2 m samples) feed the HUD (`#stats`, `#prof` canvas).
 - **Rendering cost:** the city uses `MeshLambertMaterial` (`lam()`). `MeshStandardMaterial` (`mat()`) is kept only for marble, gold and bronze. There is no logarithmic depth buffer; instead the camera near/far and the fog switch between overview (3–9000 m) and ride (0.5–2600 m), and roads use `polygonOffset`. Static scene objects have `matrixAutoUpdate` off. Only the bike, the sun and the camera update their matrices.
 - **Night mode:** `setNight()` swaps the sky, fog and lights, and switches on emissive maps: lit windows and shops on `MAT.win`/`MAT.shop`, a floodlit Colosseum on `MAT.col`, and the Vittoriano and arch marble on `MV.m`. Street lamps are instanced every ~32 m along car roads, with additive light pools on the ground. Six real `PointLight`s hop to the lamps nearest the focus every 10 frames (`nightStep`). The star dome follows the camera. `NIGHT.objs` is dynamic, so it is excluded from the static matrix freeze.
