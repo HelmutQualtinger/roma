@@ -1064,7 +1064,250 @@ function pedal(phi) {
 pedal(0);
 bike.visible = false;
 
-const ride = { on: false, s: 0, v: 2, phi: 0, lean: 0, pitch: 0, heading: null, cam: 'chase', camYaw: 0, camD: 7.5, camH: 2.8, sweepT: 0 };
+// ---------- lion: gallops after the rider along the route (local: x to the side, y up, z forward; paws touch y = 0) ----------
+// lofted torso and head, ~2200 mane strands, IK legs (paw trajectories fixed to the ground in stance, rotary gallop), swinging tail
+const lion = new THREE.Group(); lion.visible = false; scene.add(lion);
+const LRNG = (s => () => ((s = Math.imul(s ^ s >>> 15, 1 | s) + 0x6d2b79f5 | 0, ((s ^ s >>> 14) >>> 0) / 4294967296)))(1834818);
+const furTex = (() => {                                          // short hair strokes, tileable; tinted by vertex colours, also used as bump
+  const c = document.createElement('canvas'); c.width = c.height = 512; const g = c.getContext('2d');
+  g.fillStyle = '#e4e4e4'; g.fillRect(0, 0, 512, 512); g.lineCap = 'round';
+  for (let i = 0; i < 16000; i++) {
+    const x = LRNG() * 512, y = LRNG() * 512, l = 5 + LRNG() * 12, dx = (LRNG() - 0.5) * 4, b = 170 + LRNG() * 85 | 0;
+    g.strokeStyle = `rgba(${b},${b},${b},0.55)`; g.lineWidth = 0.8 + LRNG() * 1.4;
+    for (const ox of [0, -512, 512]) for (const oy of [0, -512]) {
+      if ((ox && x > 20 && x < 492) || (oy && y < 492)) continue;
+      g.beginPath(); g.moveTo(x + ox, y + oy); g.lineTo(x + ox + dx, y + oy + l); g.stroke();
+    }
+  }
+  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = ANISO; t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+})();
+const mFur = new THREE.MeshStandardMaterial({ map: furTex, bumpMap: furTex, bumpScale: 2, vertexColors: true, roughness: 0.93, side: THREE.DoubleSide });
+const mGloss = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.22, metalness: 0.05 });
+const LC = h => new THREE.Color(h);
+const FUR = { back: LC('#a9773d'), side: LC('#cf9f5c'), belly: LC('#efdcb4'), cream: LC('#f3e6cc'), dark: LC('#2a1a10'), paw: LC('#c89858'),
+  maneIn: LC('#b47c3a'), maneOut: LC('#3e2614'), nose: LC('#5a2f2a'), lip: LC('#24150f'), eye: LC('#d89422'), pupil: LC('#050505'),
+  tooth: LC('#f2eee2'), tongue: LC('#c45a62'), mouth: LC('#5c1a1e') };
+const fnoise = p => 1 + 0.06 * Math.sin(p.x * 41 + p.y * 23) * Math.sin(p.z * 37 - p.y * 19) + 0.04 * Math.sin(p.x * 97 - p.z * 83 + p.y * 71);
+const furCol = (P, N) => {                                       // darker along the back, cream belly and insides
+  const c = N.y > 0.25 ? FUR.side.clone().lerp(FUR.back, Math.min(1, (N.y - 0.25) / 0.6)) : N.y < -0.15 ? FUR.side.clone().lerp(FUR.belly, Math.min(1, (-N.y - 0.15) / 0.45)) : FUR.side.clone();
+  return c.multiplyScalar(fnoise(P));
+};
+function paint(g, fn) {                                          // non-indexed copy with a per-vertex colour from fn(position, normal)
+  if (!g.attributes.normal) g.computeVertexNormals();
+  g = g.index ? g.toNonIndexed() : g;
+  const p = g.attributes.position, n = g.attributes.normal, c = new Float32Array(p.count * 3), P = new THREE.Vector3(), Nn = new THREE.Vector3();
+  for (let i = 0; i < p.count; i++) { const k = fn(P.fromBufferAttribute(p, i), Nn.fromBufferAttribute(n, i)); c[3 * i] = k.r; c[3 * i + 1] = k.g; c[3 * i + 2] = k.b; }
+  return g.setAttribute('color', new THREE.BufferAttribute(c, 3));
+}
+const solid = c => (P) => c.clone().multiplyScalar(fnoise(P));
+function lpart(list, geo, colFn, setup) {                       // bake a transformed, painted geometry into a merge list
+  const o = new THREE.Object3D(); setup?.(o); o.updateMatrix();
+  geo.applyMatrix4(o.matrix);
+  list.push(paint(geo, colFn));
+}
+function lmesh(list, m, parent) { const o = new THREE.Mesh(mergeGeometries(list), m); o.castShadow = true; parent.add(o); return o; }
+// loft along z through sections [z, yCentre, halfWidth, top, bottom] (Catmull-Rom between them); seam under the belly
+function loft(secs, seg = 40, ring = 28, uvU = 3, uvV = 4) {
+  const cr = (a, b, c, d, t) => 0.5 * (2 * b + (c - a) * t + (2 * a - 5 * b + 4 * c - d) * t * t + (3 * b - a - 3 * c + d) * t * t * t);
+  const at = (f) => { const i = Math.min(secs.length - 2, Math.floor(f)), t = f - i, g = k => secs[Math.max(0, Math.min(secs.length - 1, k))];
+    return secs[0].map((_, j) => cr(g(i - 1)[j], g(i)[j], g(i + 1)[j], g(i + 2)[j], t)); };
+  const pos = [], uv = [], idx = [];
+  for (let i = 0; i <= seg; i++) {
+    const [z, yc, rx, rt, rb] = at(i / seg * (secs.length - 1));
+    for (let j = 0; j <= ring; j++) {
+      const a = Math.PI + j / ring * Math.PI * 2, ca = Math.cos(a), sa = Math.sin(a);
+      const sup = v => Math.sign(v) * Math.abs(v) ** 0.85;     // slightly boxy cross-section
+      pos.push(rx * sup(sa), yc + (ca > 0 ? rt : rb) * sup(ca), z); uv.push(j / ring * uvU, z * uvV);
+      if (i && j) { const A = (i - 1) * (ring + 1) + j - 1, B = A + ring + 1; idx.push(A, B, A + 1, A + 1, B, B + 1); }
+    }
+  }
+  const g = new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)).setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)).setIndex(idx);
+  g.computeVertexNormals();
+  const n = g.attributes.normal;                                  // weld the seam normals
+  for (let i = 0; i <= seg; i++) { const a = i * (ring + 1), b = a + ring; for (let k = 0; k < 3; k++) { const m = (n.array[3 * a + k] + n.array[3 * b + k]) / 2; n.array[3 * a + k] = n.array[3 * b + k] = m; } }
+  return g;
+}
+// limb bone: closed lathe hanging from the origin along -y, radii smoothly interpolated over its length
+function boneGeo(L, rs, sx = 1) {
+  const rAt = t => { const f = t * (rs.length - 1), i = Math.min(rs.length - 2, Math.floor(f)), k = f - i, e = k * k * (3 - 2 * k); return rs[i] + (rs[i + 1] - rs[i]) * e; };
+  const r0 = rs[0], r1 = rs[rs.length - 1], pts = [];
+  for (let i = 0; i <= 6; i++) { const a = i / 6 * Math.PI / 2; pts.push(new THREE.Vector2(r1 * Math.sin(a) + 1e-4, -L - r1 * Math.cos(a))); }
+  for (let i = 11; i >= 1; i--) { const t = i / 12; pts.push(new THREE.Vector2(rAt(t), -t * L)); }
+  for (let i = 0; i <= 6; i++) { const a = i / 6 * Math.PI / 2; pts.push(new THREE.Vector2(r0 * Math.cos(a) + 1e-4, r0 * Math.sin(a))); }
+  const g = new THREE.LatheGeometry(pts, 18); g.scale(sx, 1, 1); return g;
+}
+
+// torso (pivots about its centre for the gallop's rocking) with shoulder blades and the start of the neck
+const lionPivot = new THREE.Group(), lionTorso = new THREE.Group(); lion.add(lionPivot); lionPivot.add(lionTorso); lionTorso.position.y = -0.85;
+{
+  const T = [];
+  lpart(T, loft([[-0.8, 0.87, 0.03, 0.03, 0.03], [-0.73, 0.86, 0.15, 0.12, 0.15], [-0.58, 0.84, 0.205, 0.165, 0.21], [-0.36, 0.82, 0.19, 0.155, 0.18],
+    [-0.1, 0.83, 0.2, 0.16, 0.22], [0.18, 0.85, 0.22, 0.185, 0.29], [0.4, 0.89, 0.205, 0.2, 0.3], [0.58, 0.96, 0.165, 0.17, 0.25],
+    [0.7, 1.02, 0.12, 0.13, 0.16], [0.78, 1.05, 0.04, 0.04, 0.04]]), furCol);
+  for (const s of [-1, 1]) {
+    lpart(T, new THREE.SphereGeometry(1, 20, 14), furCol, o => { o.position.set(s * 0.125, 0.93, 0.42); o.scale.set(0.085, 0.17, 0.13); o.rotation.x = -0.35; });
+    lpart(T, new THREE.SphereGeometry(1, 20, 14), furCol, o => { o.position.set(s * 0.12, 0.88, -0.56); o.scale.set(0.11, 0.15, 0.17); });   // haunch
+  }
+  lmesh(T, mFur, lionTorso);
+}
+// head: lofted skull and muzzle, whisker pads, nose, amber eyes, ears; jaw hinges open while panting
+const lionHead = new THREE.Group(), lionJaw = new THREE.Group();
+lionHead.position.set(0, 1.03, 0.68); lionHead.scale.setScalar(1.18); lionTorso.add(lionHead); lionJaw.position.set(0, -0.035, 0.17); lionHead.add(lionJaw);
+{
+  const H = [], G = [], J = [], JG = [];
+  const headCol = (P, N) => {
+    const e = Math.min(Math.hypot(Math.abs(P.x) - 0.075, P.y - 0.07, P.z - 0.27), 1);
+    if (e < 0.035) return FUR.cream.clone().multiplyScalar(fnoise(P));                            // pale patch under the eyes
+    if (P.z > 0.27 && P.y < 0.005) return FUR.cream.clone().lerp(FUR.side, 0.15).multiplyScalar(fnoise(P));   // muzzle
+    if (P.z > 0.18 && N.y > 0.55) return FUR.back.clone().lerp(FUR.side, 0.3).multiplyScalar(fnoise(P));   // bridge of the nose
+    return furCol(P, N);
+  };
+  lpart(H, loft([[-0.04, 0.04, 0.05, 0.05, 0.05], [0.04, 0.05, 0.135, 0.13, 0.11], [0.13, 0.05, 0.155, 0.135, 0.115], [0.22, 0.04, 0.13, 0.11, 0.09],
+    [0.3, 0.017, 0.095, 0.082, 0.07], [0.37, 0.002, 0.085, 0.066, 0.055], [0.415, -0.006, 0.062, 0.046, 0.04], [0.432, -0.01, 0.015, 0.012, 0.012]], 36, 28, 2, 5), headCol);
+  for (const s of [-1, 1]) {
+    lpart(H, new THREE.SphereGeometry(1, 16, 12), (P) => FUR.cream.clone().multiplyScalar(fnoise(P) * (0.97 + 0.03 * Math.sin(P.x * 400) * Math.sin(P.z * 380))),
+      o => { o.position.set(s * 0.042, -0.03, 0.355); o.scale.set(0.05, 0.04, 0.06); });         // whisker pads
+    lpart(H, new THREE.SphereGeometry(1, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), (P, N) => (N.z > 0.2 ? FUR.cream : FUR.dark).clone(),
+      o => { o.position.set(s * 0.1, 0.155, 0.06); o.rotation.set(-Math.PI / 2 + 0.25, 0, s * 0.45); o.scale.set(0.048, 0.03, 0.052); });   // ears
+    lpart(H, new THREE.SphereGeometry(1, 12, 8), (P) => FUR.back.clone().multiplyScalar(0.7),
+      o => { o.position.set(s * 0.075, 0.118, 0.255); o.scale.set(0.04, 0.012, 0.025); o.rotation.z = s * 0.35; });   // brow
+    lpart(G, new THREE.SphereGeometry(0.021, 16, 12), (P) => Math.hypot(Math.abs(P.x) - 0.083, P.y - 0.094, P.z - 0.279) < 0.009 ? FUR.pupil : FUR.eye,
+      o => { o.position.set(s * 0.078, 0.092, 0.262); });                                             // eyes with pupils
+    lpart(G, new THREE.ConeGeometry(0.009, 0.045, 8), solid(FUR.tooth), o => { o.position.set(s * 0.032, -0.06, 0.375); o.rotation.x = Math.PI; });   // upper canines
+    lpart(JG, new THREE.ConeGeometry(0.008, 0.035, 8), solid(FUR.tooth), o => o.position.set(s * 0.028, 0.0, 0.18));                               // lower canines
+  }
+  lpart(G, new THREE.SphereGeometry(1, 18, 12), solid(FUR.nose), o => { o.position.set(0, 0.03, 0.418); o.scale.set(0.042, 0.026, 0.024); o.rotation.x = 0.35; });   // nose pad
+  lpart(G, new THREE.BoxGeometry(0.004, 0.035, 0.01), solid(FUR.lip), o => o.position.set(0, -0.005, 0.425));                // philtrum
+  lpart(J, loft([[-0.02, -0.02, 0.03, 0.02, 0.02], [0.05, -0.025, 0.075, 0.025, 0.035], [0.15, -0.025, 0.06, 0.02, 0.03], [0.21, -0.02, 0.04, 0.015, 0.022], [0.225, -0.02, 0.01, 0.005, 0.005]], 20, 20, 1, 4),
+    (P, N) => N.y > 0.3 ? FUR.mouth.clone() : FUR.cream.clone().multiplyScalar(fnoise(P)));          // lower jaw, chin
+  lpart(JG, new THREE.SphereGeometry(1, 14, 8), solid(FUR.tongue), o => { o.position.set(0, -0.005, 0.12); o.scale.set(0.04, 0.012, 0.08); });   // tongue
+  lpart(G, new THREE.SphereGeometry(1, 14, 8), solid(FUR.mouth), o => { o.position.set(0, -0.035, 0.28); o.scale.set(0.06, 0.02, 0.12); });      // palate
+  lmesh(H, mFur, lionHead); lmesh(G, mGloss, lionHead); lmesh(J, mFur, lionJaw); lmesh(JG, mGloss, lionJaw);
+  // mane: strands rooted on a tube that hugs the neck and the back of the skull, swept back and down, dark at the tips
+  const M = [], core = [];
+  lpart(core, loft([[-0.5, -0.12, 0.05, 0.05, 0.05], [-0.42, -0.09, 0.17, 0.17, 0.2], [-0.2, -0.02, 0.18, 0.18, 0.22], [0.0, 0.04, 0.18, 0.17, 0.2], [0.09, 0.05, 0.17, 0.16, 0.17], [0.13, 0.05, 0.05, 0.05, 0.05]], 24, 24),
+    (P) => FUR.maneOut.clone().lerp(FUR.maneIn, 0.35));
+  lmesh(core, mFur, lionHead);
+  const up = new THREE.Vector3(0, 1, 0), q = new THREE.Quaternion(), dir = new THREE.Vector3();
+  for (let i = 0; i < 2200; i++) {
+    const z = -0.44 + LRNG() * 0.55, th = LRNG() * Math.PI * 2, front = Math.max(0, (z - 0.02) / 0.09);
+    const yc = 0.04 + Math.min(0, z) * 0.35, rx = 0.165, ry = Math.cos(th) > 0 ? 0.16 : 0.19;
+    const root = new THREE.Vector3(rx * Math.sin(th) * 0.95, yc + ry * Math.cos(th) * 0.95, z);
+    dir.set(Math.sin(th), Math.cos(th), 0).multiplyScalar(1 + front * 0.6).add(V(0, -0.3, -0.95 + front * 0.6))
+      .add(V(LRNG() - 0.5, LRNG() - 0.5, LRNG() - 0.5).multiplyScalar(0.45)).normalize();
+    const bottom = Math.max(0, -Math.cos(th)), len = (0.14 + LRNG() * 0.12) * (1 + bottom * 0.5 + (z < -0.2 ? 0.25 : 0)) * (1 - front * 0.45);
+    const r = 0.034 + LRNG() * 0.026, tone = LRNG(), outer = Math.min(1, 0.35 + Math.max(0, Math.cos(th)) * 0.25 + (z < -0.15 ? 0.3 : 0) - front * 0.4 + tone * 0.25);
+    const geo = new THREE.ConeGeometry(r, len, 5, 2, true); geo.translate(0, len / 2, 0); geo.scale(1.5, 1, 1);
+    q.setFromUnitVectors(up, dir);
+    const tw = LRNG() * Math.PI, rootC = FUR.maneIn.clone().lerp(FUR.maneOut, outer * 0.6), tipC = FUR.maneIn.clone().lerp(FUR.maneOut, Math.min(1, outer + 0.25));
+    lpart(M, geo, (P) => { const t = Math.min(1, P.distanceTo(root) / len); return rootC.clone().lerp(tipC, t); },
+      o => { o.rotation.y = tw; o.updateMatrix(); o.quaternion.premultiply(q); o.position.copy(root); });
+  }
+  lmesh(M, mFur, lionHead);
+}
+// legs: [shoulder/hip joint in torso space, bone lengths and radii]; front legs bend at the elbow backwards, hind legs at the knee forwards
+const LEGS = [[-1, 'hind', 0.0], [1, 'hind', 0.1], [-1, 'front', 0.5], [1, 'front', 0.6]].map(([sx, kind, off]) => {
+  const front = kind === 'front', bones = front
+    ? [[0.34, [0.115, 0.105, 0.088, 0.072, 0.06], 0.9], [0.38, [0.066, 0.064, 0.055, 0.047, 0.043], 0.95], [0.11, [0.044, 0.046, 0.05], 1]]
+    : [[0.34, [0.15, 0.14, 0.115, 0.078, 0.06], 0.72], [0.36, [0.074, 0.064, 0.05, 0.04, 0.036], 0.9], [0.24, [0.036, 0.037, 0.039, 0.042], 1]];
+  const segs = bones.map(([L, rs, s], i) => {
+    const g = paint(boneGeo(L, rs, s), (P, N) => (i === 2 ? FUR.paw : FUR.side).clone().lerp(FUR.belly, Math.max(0, -N.x * sx) * 0.5).multiplyScalar(fnoise(P)));
+    const m = new THREE.Mesh(g, mFur); m.castShadow = true; lion.add(m); return m;
+  });
+  const paw = new THREE.Group(), P = [];
+  const k = front ? 1.15 : 1;
+  lpart(P, new THREE.SphereGeometry(1, 18, 12), (Q, N) => (N.y < -0.5 ? FUR.dark : FUR.paw).clone().multiplyScalar(fnoise(Q)),
+    o => { o.position.set(0, -0.035 * k, 0.04 * k); o.scale.set(0.058 * k, 0.04 * k, 0.075 * k); });
+  for (let t = 0; t < 4; t++) lpart(P, new THREE.SphereGeometry(0.026 * k, 12, 8), (Q, N) => (N.y < -0.5 ? FUR.dark : FUR.paw).clone(),
+    o => o.position.set((t - 1.5) * 0.03 * k, -0.05 * k, (0.095 + (t % 3 ? 0.012 : 0)) * k));
+  lmesh(P, mFur, paw); lion.add(paw);
+  return { sx, front, off, segs, paw, len: bones.map(b => b[0]), joint: front ? V(sx * 0.13, 0.8, 0.4) : V(sx * 0.135, 0.84, -0.52), wristY: front ? 0.075 : 0.065 };
+});
+// tail: 10 nested segments ending in a dark tuft
+const tail = [];
+{
+  let parent = lionTorso;
+  for (let i = 0; i < 10; i++) {
+    const g = new THREE.Group(); g.position.set(0, i ? 0 : 0.9, i ? -0.085 : -0.76); parent.add(g); tail.push(g); parent = g;
+    const geo = boneGeo(0.085, [0.036 - i * 0.0018, 0.035 - i * 0.0018]); geo.rotateX(Math.PI / 2);
+    const m = new THREE.Mesh(paint(geo, (P, N) => FUR.side.clone().lerp(FUR.back, Math.max(0, N.y) * 0.5).lerp(FUR.dark, Math.max(0, i - 7) * 0.25).multiplyScalar(fnoise(P))), mFur);
+    m.castShadow = true; g.add(m);
+  }
+  const T = [];
+  lpart(T, new THREE.SphereGeometry(1, 14, 10), solid(FUR.dark), o => { o.position.set(0, 0, -0.13); o.scale.set(0.05, 0.05, 0.1); });
+  for (let i = 0; i < 24; i++) {
+    const a = LRNG() * Math.PI * 2, geo = new THREE.ConeGeometry(0.02, 0.09, 5, 1, true);
+    lpart(T, geo, solid(FUR.dark.clone().multiplyScalar(0.8 + LRNG() * 0.6)), o => { o.position.set(Math.cos(a) * 0.035, Math.sin(a) * 0.035, -0.15 - LRNG() * 0.04); o.rotation.set(-Math.PI / 2 + Math.sin(a) * 0.5, 0, -Math.cos(a) * 0.5); });
+  }
+  lmesh(T, mFur, tail[9]);
+}
+
+const LION = { d: null, v: 2, t: 0, phase: 0, heading: null, roll: 0, pitch: 0 };
+const _lm = new THREE.Matrix4(), _ldn = new THREE.Vector3(0, -1, 0), _ld = new THREE.Vector3();
+const wrapA = a => Math.atan2(Math.sin(a), Math.cos(a));
+function routeAt(d) {                                            // point on the route; before the start it continues the first tangent backwards
+  if (d >= 0) return route.getPointAt(Math.min(1, d / ROUTE_LEN));
+  return route.getPointAt(0).addScaledVector(route.getTangentAt(0), d);
+}
+function lionBone(m, a, b) { m.position.copy(a); m.quaternion.setFromUnitVectors(_ldn, _ld.subVectors(b, a).normalize()); }
+function lionIK(a, t, l1, l2, bend) {                            // two-bone IK: mid joint bent towards 'bend'
+  const dir = t.clone().sub(a), d = THREE.MathUtils.clamp(dir.length(), Math.abs(l1 - l2) + 1e-3, l1 + l2 - 1e-3); dir.normalize();
+  const x = (l1 * l1 - l2 * l2 + d * d) / (2 * d), h = Math.sqrt(Math.max(0, l1 * l1 - x * x));
+  const b = bend.clone().addScaledVector(dir, -bend.dot(dir)).normalize();
+  return a.clone().addScaledVector(dir, x).addScaledVector(b, h);
+}
+function lionStep(sim) {
+  // follow the rider at a gap that slowly breathes between 3.4 and 4.6 m, offset ~0.75 m to the side so the rider stays in view
+  LION.t += sim;
+  const d = ride.s - 4 - 0.6 * Math.sin(LION.t * 0.35), dd = LION.d === null ? 0 : d - LION.d; LION.d = d;
+  if (sim > 0) LION.v += (dd / sim - LION.v) * Math.min(1, sim * 3);
+  const v = Math.max(0, LION.v), k = THREE.MathUtils.clamp((v - 1) / 7, 0.25, 1);
+  const p = routeAt(d), a = routeAt(d - 1.5), b = routeAt(d + 1.5), target = Math.atan2(b.x - a.x, b.z - a.z);
+  const h0 = LION.heading ?? target;
+  LION.heading = h0 + wrapA(target - h0) * (LION.heading === null ? 1 : Math.min(1, sim * 6));
+  const turn = sim > 0 ? wrapA(LION.heading - h0) / sim : 0;
+  LION.roll += (THREE.MathUtils.clamp(-v * turn / 9.81 * 0.6, -0.25, 0.25) - LION.roll) * Math.min(1, sim * 4);
+  const side = 0.75 + 0.2 * Math.sin(LION.t * 0.21), ch = Math.cos(LION.heading), sh = Math.sin(LION.heading);
+  p.x += ch * side; p.z -= sh * side; p.y = gh(p.x, -p.z) + RIDE_Y - 0.02;
+  LION.pitch = -Math.atan((gh(b.x, -b.z) - gh(a.x, -a.z)) / 3);
+  lion.position.copy(p); lion.rotation.set(LION.pitch, LION.heading, LION.roll, 'YXZ');
+  // rotary gallop: stance length L per leg, duty factor drops with speed, so paws stay planted while the body passes over them
+  const L = THREE.MathUtils.clamp(0.3 + 0.045 * v, 0.35, 0.72), duty = THREE.MathUtils.lerp(0.45, 0.2, THREE.MathUtils.clamp((v - 2) / 7.7, 0, 1));
+  if (dd > 0) LION.phase += dd / (L / duty);
+  const st = LEGS.map(G => { const q = ((LION.phase + G.off) % 1 + 1) % 1; return q < duty ? { stance: true, t: q / duty } : { stance: false, t: (q - duty) / (1 - duty) }; });
+  const load = f => st.reduce((s, x, i) => s + (x.stance && LEGS[i].front === f ? Math.sin(Math.PI * x.t) : 0), 0);
+  const hl = load(false), fl = load(true);
+  lionPivot.position.set(0, 0.85 + k * (0.03 - 0.035 * (hl + fl)), 0);
+  lionPivot.rotation.x = k * 0.07 * (fl - hl);
+  lionHead.rotation.x = 0.14 - lionPivot.rotation.x * 0.8 + 0.03 * Math.sin(LION.phase * Math.PI * 2);
+  lionJaw.rotation.x = 0.12 + 0.1 * k + 0.05 * Math.sin(LION.t * 7);
+  lionPivot.updateMatrix(); lionTorso.updateMatrix(); _lm.multiplyMatrices(lionPivot.matrix, lionTorso.matrix);
+  LEGS.forEach((G, i) => {
+    const { stance, t } = st[i], e = 0.5 - 0.5 * Math.cos(Math.PI * t);
+    const S = G.joint.clone().applyMatrix4(_lm), z0 = G.joint.z + (G.front ? 0.02 : 0.07);
+    const W = V(G.sx * 0.1, G.wristY, stance ? z0 + L / 2 - L * t : z0 - L / 2 + L * e);
+    if (!stance) W.y += (G.front ? 0.1 + 0.025 * v : 0.08 + 0.02 * v) * Math.sin(Math.PI * t) ** 0.8;
+    let mid, low, psi;
+    if (G.front) {                                               // carpus folds the paw backwards during the swing
+      const beta = stance ? -0.08 : -0.08 + 1.9 * k * Math.sin(Math.PI * t) ** 0.7;
+      low = W.clone().add(V(0, G.len[2] * Math.cos(beta), G.len[2] * Math.sin(beta)));
+      mid = lionIK(S, low, G.len[0], G.len[1], V(0, -0.2, -1)); psi = stance ? 0 : beta;
+    } else {                                                     // hock behind the paw, flexing more in the swing
+      const gam = stance ? 0.5 + 0.3 * t : 0.8 - 0.3 * e + 0.7 * k * Math.sin(Math.PI * t);
+      low = W.clone().add(V(0, G.len[2] * Math.cos(gam), -G.len[2] * Math.sin(gam)));
+      mid = lionIK(S, low, G.len[0], G.len[1], V(0, -0.2, 1)); psi = stance ? 0 : 1.1 * k * Math.sin(Math.PI * t);
+    }
+    lionBone(G.segs[0], S, mid); lionBone(G.segs[1], mid, low); lionBone(G.segs[2], low, W);
+    G.paw.position.copy(W); G.paw.rotation.x = psi;
+  });
+  tail.forEach((g, i) => {
+    g.rotation.x = (i ? 0.13 : -0.7) + 0.12 * k * Math.sin(LION.phase * Math.PI * 2 - i * 0.6);
+    g.rotation.y = 0.09 * Math.sin(LION.t * 2.1 - i * 0.5);
+  });
+}
+
+const ride = { on: false, s: 0, v: 2, phi: 0, lean: 0, pitch: 0, heading: null, cam: 'chase', camYaw: 0, camD: 9.5, camH: 3.2, sweepT: 0 };
 const hud = document.getElementById('hud');
 // elevation profile along the route (2 m samples) and gradient smoothed over ±10 m
 const PROF_STEP = 2, PROF = [];
@@ -1138,9 +1381,10 @@ function rideStep(dt) {
   if (P > 5) { ride.phi += ds / 2.1 * 2 * Math.PI / 2.6; pedal(ride.phi); }   // coasting downhill: no pedalling
   for (const w of wheels) w.rotation.x += ds / 0.34;
   const { p, t } = placeBike(dt);
+  lionStep(sim);
   const drone = ride.cam === 'drone';
   // camera is rigidly attached to the rider (constant distance/height); only its yaw trails the bike's heading
-  const D = drone ? 28 : 7.5, H = drone ? 22 : 2.8, kz = 1 - Math.exp(-dt * 2);
+  const D = drone ? 28 : 9.5, H = drone ? 22 : 3.2, kz = 1 - Math.exp(-dt * 2);
   ride.camYaw += Math.atan2(Math.sin(ride.heading - ride.camYaw), Math.cos(ride.heading - ride.camYaw)) * (1 - Math.exp(-dt * 2.5));
   ride.camD += (D - ride.camD) * kz; ride.camH += (H - ride.camH) * kz;   // eases only when switching camera mode
   const sy = Math.sin(ride.camYaw), cy = Math.cos(ride.camYaw), ahead = drone ? 10 : 6;
@@ -1162,9 +1406,10 @@ function rideStep(dt) {
 function startRide() {
   if (ride.s >= ROUTE_LEN || ride.s === 0) {
     ride.s = 0; ride.v = 2; ride.mult = 1; ride.heading = null; const { p, t } = placeBike(1);
+    LION.d = LION.heading = null; LION.t = LION.phase = 0; LION.v = 2; lionStep(0);
     ride.camYaw = ride.heading + Math.PI; ride.camD = 14; ride.camH = 4; ride.sweepT = 0;   // start in front of the rider, then swing behind
   }
-  ride.on = true; bike.visible = true; routeLine.getObjectByName('overview').visible = false; camera.fov = 62; camera.near = 0.5; camera.far = 2600; scene.fog.near = 700; scene.fog.far = 2500; camera.updateProjectionMatrix(); controls.enabled = false; controls.autoRotate = false; tween = null;
+  ride.on = true; bike.visible = lion.visible = true; routeLine.getObjectByName('overview').visible = false; camera.fov = 62; camera.near = 0.5; camera.far = 2600; scene.fog.near = 700; scene.fog.far = 2500; camera.updateProjectionMatrix(); controls.enabled = false; controls.autoRotate = false; tween = null;
   hud.style.display = ''; document.getElementById('stats').style.display = ''; document.getElementById('ride').classList.add('on'); setT(document.getElementById('ride'), 'ride.pause');
 }
 function stopRide(done = false) {
@@ -1354,7 +1599,7 @@ function nightStep() {                                             // stars foll
 }
 document.getElementById('nightBtn').onclick = () => setNight(!NIGHT.on);
 
-for (const o of scene.children) if (o !== bike && o !== sun && o !== sun.target && o !== NIGHT.objs)
+for (const o of scene.children) if (o !== bike && o !== lion && o !== sun && o !== sun.target && o !== NIGHT.objs)
   o.traverse(c => { c.updateMatrix(); c.updateMatrixWorld(true); c.matrixAutoUpdate = false; c.matrixWorldAutoUpdate = false; });
 view(VIEWS[location.hash.slice(1)] ? location.hash.slice(1) : 'ge', true);
 if (location.search.includes('night')) setNight(true);
@@ -1397,5 +1642,8 @@ renderer.setAnimationLoop(() => {
   if (INFO && ++INFO.f === 3) console.log('INFO ' + JSON.stringify({ ...renderer.info.render, pr: renderer.getPixelRatio() }));
 });
 </script>
+<!-- Besucherzählung (GoatCounter) -->
+<script data-goatcounter="https://helmutqualtinger.goatcounter.com/count"
+        async src="//gc.zgo.at/count.js"></script>
 </body>
 </html>

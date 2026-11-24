@@ -18,6 +18,7 @@ Repository: https://github.com/HelmutQualtinger/roma · Online: https://helmutqu
 | 10 | Sprache als Flagge | Auswahl 🇩🇪 🇬🇧 🇮🇹 🇫🇷 mit Sprachnamen als Tooltip (unter Windows erscheinen Buchstaben statt Flaggen) |
 | 11 | Inschrift am Konstantinsbogen spiegelverkehrt | Relief- und Inschriftflächen zeigen jetzt nach außen (Ursache: Rotationsbedingung `face > 0` statt `face < 0`) |
 | 12 | Radfahrer viel detaillierter | Rennrad mit Speichenrädern, Felgen, Nabe, Kassette, Gabel, Hinterbau, Rennlenker mit Griffen und Bremshebeln, Kettenblatt, Kette, Sattel und Flasche. Fahrer mit Rumpf, Ellbogen-IK, Ärmelbündchen, Handschuhen, Helm mit Lüftungsschlitzen, Sonnenbrille, Socken und Schuhen auf den mitdrehenden Pedalen. Statische Teile sind pro Material zu einem Mesh zusammengefasst; Commit `0262ef1` |
+| 13 | Besucherzählung (GoatCounter) | GoatCounter für `helmutqualtinger` (`https://helmutqualtinger.goatcounter.com/count`, Skript `//gc.zgo.at/count.js`) in `roma3d.html` eingebunden |
 
 ## Commits
 
