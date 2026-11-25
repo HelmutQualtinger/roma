@@ -404,15 +404,17 @@ class Tiled {
 // ---------- buildings ----------
 const G = { win: new Tiled(), shop: new Tiled(), stone: new Tiled(), mono: new Tiled(), roof: new Tiled() };
 const TILE = { win: [13.6, 14], stone: [6, 6], mono: [8, 16] };
-function walls(geo, ring, zb, zt, du, dv, voff, k) {
+// uo/vo: whole-tile UV offsets (texture unchanged) that give every facade its own window cells (floor(uv·4)), so lit windows can switch individually at night
+function walls(geo, ring, zb, zt, du, dv, voff, k, uo = 0, vo = 0) {
   let u = 0;
   for (let i = 0; i < ring.length; i++) {
     const a = ring[i], b = ring[(i + 1) % ring.length], len = a.distanceTo(b);
-    const u0 = u / du, u1 = (u + len) / du, v0 = (zb - voff) / dv, v1 = (zt - voff) / dv;
+    const u0 = uo + u / du, u1 = uo + (u + len) / du, v0 = vo + (zb - voff) / dv, v1 = vo + (zt - voff) / dv;
     geo.quad(P3(a.x, a.y, zb), P3(b.x, b.y, zb), P3(b.x, b.y, zt), P3(a.x, a.y, zt), [u0, v0], [u1, v0], [u1, v1], [u0, v1], k);
     u += len;
   }
 }
+let bIdx = 0;
 for (const b of S.buildings) {
   if (b.o.length < 6) continue;
   const outer = pts2(b.o), holes = b.h.filter(h => h.length >= 6).map(pts2);
@@ -437,9 +439,10 @@ for (const b of S.buildings) {
   }
   const [du, dv] = TILE[kind];
   for (const r of rings) {
+    const hsh = Math.imul(++bIdx, 2654435761) >>> 0, uo = hsh % 1024, vo = (hsh >>> 10) % 64;   // deterministic per ring, no rnd() draw
     if (kind === 'win' && b.m === 0 && zt - hc > 8) {
       walls(T('shop'), r, zb, hc + 4.2, 18, 4.2, hc, k);
-      walls(T('win'), r, hc + 4.2, zt, du, dv, hc + 4.2, k);
+      walls(T('win'), r, hc + 4.2, zt, du, dv, hc + 4.2, k, uo, vo);
     } else walls(T(kind), r, zb, zt, du, dv, hc, k);
   }
   let tris;
@@ -1613,13 +1616,37 @@ addEventListener('resize', onResize);
 
 // ---------- night mode: starry sky, moonlight, street lamps, lit windows and floodlit monuments ----------
 const NIGHT = { on: false, objs: new THREE.Group() };
+// window lights: every window switches on/off independently after exponentially distributed times (mean WIN.mean seconds).
+// The superposition of N such processes is a Poisson process with rate N/mean that toggles a uniformly random window,
+// which is exactly equivalent and needs no per-window timers
+const WIN = { n: 65536, mean: 100, data: new Uint8Array(65536), next: 0 };
+WIN.lit = () => 140 + Math.floor(Math.random() * 116);          // slightly varying brightness per lit window
+for (let i = 0; i < WIN.n; i++) WIN.data[i] = Math.random() < 0.5 ? WIN.lit() : 0;   // stationary state: half the windows lit
+WIN.tex = new THREE.DataTexture(WIN.data, 256, 256, THREE.RedFormat, THREE.UnsignedByteType);
+WIN.tex.needsUpdate = true;
+function winStep(dt) {
+  WIN.next -= dt; let n = 0;
+  while (WIN.next <= 0) {
+    const i = Math.floor(Math.random() * WIN.n); WIN.data[i] = WIN.data[i] ? 0 : WIN.lit(); n++;
+    WIN.next += -Math.log(1 - Math.random()) * WIN.mean / WIN.n;
+  }
+  if (n) WIN.tex.needsUpdate = true;
+}
 {
   // lit windows / shop fronts: emissive maps aligned with the window and shop textures
   const glow = (w, h, draw) => { const t = tex(w, h, (c, W2, H2) => { c.fillStyle = '#000'; c.fillRect(0, 0, W2, H2); draw(c); }); return t; };
   const warm = () => `hsl(${32 + rnd() * 14}, ${70 + rnd() * 25}%, ${55 + rnd() * 20}%)`;
+  // every window is drawn lit; WIN.tex (one byte per window, 256 × 256 slots hashed from the window cell) decides on/off and brightness
   MAT.win.emissiveMap = glow(512, 512, c => {
-    for (let r = 0; r < 4; r++) for (let q = 0; q < 4; q++) if (rnd() < 0.38) { c.fillStyle = rnd() < 0.1 ? '#9fb8ff' : warm(); c.fillRect(q * 128 + 40, r * 128 + 25, 48, 78); }
+    for (let r = 0; r < 4; r++) for (let q = 0; q < 4; q++) { c.fillStyle = rnd() < 0.1 ? '#9fb8ff' : warm(); c.fillRect(q * 128 + 40, r * 128 + 25, 48, 78); }
   });
+  MAT.win.onBeforeCompile = sh => {
+    sh.uniforms.winState = { value: WIN.tex };
+    sh.fragmentShader = 'uniform sampler2D winState;\n' + sh.fragmentShader.replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+      { ivec2 wc = ivec2(floor(vEmissiveMapUv * 4.0)) + 64;
+        uint h = uint(wc.x) * 1664525u ^ uint(wc.y) * 22695477u; h ^= h >> 16; h *= 0x7feb352du; h ^= h >> 15;
+        totalEmissiveRadiance *= texelFetch(winState, ivec2(h & 255u, (h >> 8) & 255u), 0).r; }`);
+  };
   MAT.shop.emissiveMap = glow(512, 128, c => {
     for (let q = 0; q < 4; q++) if (rnd() < 0.55) { c.fillStyle = warm(); c.beginPath(); c.moveTo(q * 128 + 24, 128); c.lineTo(q * 128 + 24, 52); c.arc(q * 128 + 64, 52, 40, Math.PI, 2 * Math.PI); c.lineTo(q * 128 + 104, 128); c.fill(); }
   });
@@ -1766,7 +1793,7 @@ renderer.setAnimationLoop(() => {
   }
   renderer.render(scene, camera);
   updateLabels();
-  if (NIGHT.on) nightStep();
+  if (NIGHT.on) { nightStep(); winStep(dt); }
   if (INFO && ++INFO.f === 3) console.log('INFO ' + JSON.stringify({ ...renderer.info.render, pr: renderer.getPixelRatio() }));
 });
 </script>
