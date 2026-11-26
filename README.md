@@ -1,6 +1,6 @@
 # Kolosseum 3D
 
-Ein Three.js-Modell der Innenstadt von Rom auf einer einzigen Seite: ein Ausschnitt von 2 × 2 km rund um das Kolosseum, erstellt aus OpenStreetMap-Daten und SRTM-Geländedaten. Es enthält ein prozedural erzeugtes Kolosseum und Vittoriano sowie eine animierte Radfahrt von der Piazza Venezia über den Circo Massimo, um das Kolosseum herum und über die Via dei Fori Imperiali zurück. Die Route ist als Neonlinie auf dem Boden eingezeichnet. Eine Anzeige zeigt dabei Steigung, Geschwindigkeit, Leistung und Höhe.
+Ein Three.js-Modell der Innenstadt von Rom auf einer einzigen Seite: ein Ausschnitt von 3 × 3 km rund um das Kolosseum, erstellt aus OpenStreetMap-Daten und SRTM-Geländedaten. Es enthält ein prozedural erzeugtes Kolosseum und Vittoriano sowie eine animierte Radfahrt von der Piazza Venezia am Circo Massimo entlang zum Kolosseum, um das Kolosseum herum, die Via Cavour hinauf zum Bahnhof Termini und über die Piazza della Repubblica und die Via Nazionale zurück. Die Route ist als Neonlinie auf dem Boden eingezeichnet. Eine Anzeige zeigt dabei Steigung, Geschwindigkeit, Leistung und Höhe.
 
 ![Übersicht des Modells](docs/ge.png)
 

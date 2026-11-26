@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A single-page Three.js 3D model of central Rome: a 2 × 2 km area around the Colosseum, built from OpenStreetMap data and SRTM terrain. It contains a procedural Colosseum, a procedural Vittoriano (Altare della Patria) and an animated bike ride: Piazza Venezia → Circo Massimo → around the Colosseum → Via dei Fori Imperiali → back, drawn on the ground as a neon line. During the ride a HUD shows gradient, speed, power and altitude. The UI is available in German, English, Italian and French: the `I18N` table in the classic script before the module holds every string. Static elements carry `data-i18n` keys, and dynamic text uses `tr()` or `setT()`. The language comes from `?lang=de|en|it|fr`, then the saved choice (`localStorage`), then the browser language, and falls back to German.
+A single-page Three.js 3D model of central Rome: a 3 × 3 km area around the Colosseum, built from OpenStreetMap data and SRTM terrain. It contains a procedural Colosseum, a procedural Vittoriano (Altare della Patria) and an animated bike ride of 6.1 km: Piazza Venezia → Via del Teatro di Marcello → Circo Massimo → Via di San Gregorio → around the Colosseum (south, east, north) → Via Cavour → Termini (Piazza dei Cinquecento) → Piazza della Repubblica → Via Nazionale → back to Piazza Venezia, drawn on the ground as a neon line. During the ride a HUD shows gradient, speed, power and altitude. The UI is available in German, English, Italian and French: the `I18N` table in the classic script before the module holds every string. Static elements carry `data-i18n` keys, and dynamic text uses `tr()` or `setT()`. The language comes from `?lang=de|en|it|fr`, then the saved choice (`localStorage`), then the browser language, and falls back to German.
 
 ## Commands
 
@@ -14,7 +14,7 @@ Regenerate the scene data. Run the steps in this order, because each one rewrite
 ```
 cd data && python3 process.py && python3 route.py osm.json scene.json ../scene.js && python3 terrain.py
 ```
-`terrain.py` needs numpy and Pillow, and reads the Terrarium elevation tiles in `data/tiles/` (zoom 15, listed in `tiles/list.txt`). `osm.json` is a raw Overpass `out geom` dump and is the only input to `process.py`.
+`terrain.py` needs numpy and Pillow, and reads the Terrarium elevation tiles in `data/tiles/` (zoom 15, listed in `tiles/list.txt`). `osm.json` is a raw Overpass `out geom` dump and is the only input to `process.py`. It holds the buildings, building parts, highways, landuse, leisure and historic elements in the bbox 41.8761,12.4734,41.9043,12.5110. The Overpass API answers 406 to browser user agents, so use a plain client name.
 
 To check visually without a GPU, take a headless Chrome screenshot. The URL hash picks a view (`#ge`, `#close`, `#top`, `#venezia`). `?t=<seconds>#ride` starts the ride and fast-forwards it by that many seconds:
 ```
@@ -25,7 +25,7 @@ Add `?info` to the URL to log `renderer.info.render` (draw calls, triangles) onc
 ## Data pipeline (`data/`)
 
 - **`process.py`:** projects lat/lon to local metres. The origin is the Colosseum centroid (OSM relation 1834818). x = east, y = north, `KX = 111320·cos(41.8902°)`, `KY = 110574`; the JS uses the same constants. It emits compact `buildings`, `roads` and `areas` (flat `[x,y,…]` rings). It also emits `colosseum.angle`, the major-axis angle fitted from the footprint, and `origin`. Facade and roof colours come from OSM tags, or from a hash-seeded palette.
-- **`route.py`:** Dijkstra over the OSM highway graph. Car roads cost ×1 and pedestrian/foot ways cost more, so the ride stays on asphalt. Waypoints go around the Colosseum. It strips U-turn spikes and stores `route`.
+- **`route.py`:** Dijkstra over the OSM highway graph. Car roads cost ×1 and pedestrian/foot ways cost more, so the ride stays on asphalt. A waypoint can name a street, as `(x, y, 'Via Cavour')`, and then snaps only to that street's nodes, so the path can't slip into a parallel alley. A waypoint `(x, y, None, False)` may also snap to a footway. It strips U-turn spikes and moves the seam of the closed loop off any dead-end stub, so a new lap never starts with a U-turn. Then it stores `route`. `placeName()` in the page names the legs for the HUD, splitting the legs at `S_COL` and `S_TERMINI`.
 - **`terrain.py`:** turns the SRTM DSM into a DTM-like heightmap in these steps:
   1. A morphological opening removes buildings.
   2. A gaussian blur smooths the result.
@@ -33,7 +33,7 @@ Add `?info` to the URL to log `renderer.info.render` (draw calls, triangles) onc
   4. A level platform is made around the Colosseum.
   5. Laplacian-smoothed street heights are burned back in, because SRTM shows the excavated fora rather than the road surface.
 
-  The result is stored as base64 Int16 decimetres in `terrain` (8 m grid, ±1200 m).
+  The result is stored as base64 Int16 decimetres in `terrain` (8 m grid, ±1700 m). The OSM area is ±1500 m (`HALF` in `process.py`), so it reaches Termini and Piazza della Repubblica. The 30 Terrarium tiles cover the terrain.
 
 ## `roma3d.html` architecture
 
