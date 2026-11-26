@@ -1,4 +1,4 @@
-"""Build a smoothed heightmap (8 m grid, ±1200 m) from Terrarium elevation tiles in tiles/ and add it to scene.json/scene.js."""
+"""Build a smoothed heightmap (8 m grid, ±1700 m) from Terrarium elevation tiles in tiles/ and add it to scene.json/scene.js."""
 import json, math, base64
 import numpy as np
 from PIL import Image
@@ -6,7 +6,7 @@ from PIL import Image
 sc = json.load(open('scene.json')); LAT0, LON0 = sc['origin']
 KX = 111320 * math.cos(math.radians(41.8902)); KY = 110574
 Z, N = 15, 2 ** 15
-HALF, STEP = 1200, 8
+HALF, STEP = 1700, 8
 tiles = [l.strip() for l in open('tiles/list.txt')]
 xs = sorted({int(t.split('/')[1]) for t in tiles}); ys = sorted({int(t.split('/')[2]) for t in tiles})
 mosaic = np.zeros((len(ys) * 256, len(xs) * 256))

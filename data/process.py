@@ -2,7 +2,7 @@
 import json, math, hashlib
 
 LAT0, LON0 = 41.8902, 12.4922          # approx. Colosseum centre (refined below)
-HALF = 1000                            # 2 x 2 km
+HALF = 1500                            # 3 x 3 km (reaches Termini and Piazza della Repubblica)
 KX = 111320 * math.cos(math.radians(LAT0))
 KY = 110574
 
