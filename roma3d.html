@@ -36,11 +36,11 @@
   #spd { font-size: 13px; display: flex; align-items: center; gap: 6px; padding: 0 10px; border-radius: 6px; background: rgba(255,255,255,.88); border: 1px solid rgba(0,0,0,.15); }
   #hud { position: fixed; left: 50%; bottom: 40px; transform: translateX(-50%); font-size: 14px; font-weight: 600; color: #fff; background: rgba(20,28,36,.72); padding: 7px 14px; border-radius: 6px; white-space: nowrap; }
   #fps { position: fixed; right: 12px; bottom: 10px; z-index: 10; font: 700 12px/1 ui-monospace, Menlo, monospace; color: #e01818; background: rgba(255,255,255,.85); padding: 4px 7px; border-radius: 4px; pointer-events: none; }
-  #ui .lv, #stats .lv { display: none; }
+  #ui .lv, #stats .lv { display: none; } #ui label.pc { display: flex; }
   body.live #ui .lv { display: flex; } body.live #stats .lv { display: flex; } body.live #ui button.lv { display: inline-block; }
   body.live #ride, body.live #spd { display: none; } body.live.demo #spd { display: flex; }
-  #ui label.lv { font-size: 13px; align-items: center; gap: 6px; padding: 0 10px; border-radius: 6px; background: rgba(255,255,255,.88); border: 1px solid rgba(0,0,0,.15); }
-  #ui label.lv input { width: 52px; font: 13px -apple-system, system-ui, sans-serif; }
+  #ui label.lv, #ui label.pc { font-size: 13px; align-items: center; gap: 6px; padding: 0 10px; border-radius: 6px; background: rgba(255,255,255,.88); border: 1px solid rgba(0,0,0,.15); }
+  #ui label.lv input, #ui label.pc input { width: 52px; font: 13px -apple-system, system-ui, sans-serif; }
   #load { position: fixed; inset: 0; display: grid; place-items: center; font-size: 15px; color: #333; }
 </style>
 <script src="scene.js"></script>
@@ -69,7 +69,7 @@
   <button id="livePause" class="lv" data-i18n="live.pause">Pause ❚❚</button>
   <button id="liveSave" class="lv" data-i18n="live.save">Speichern ⤓</button>
   <label class="lv"><span data-i18n="weight">Gewicht</span> <input id="weight" type="number" min="30" max="200" step="1" value="88"> kg</label>
-  <label class="lv"><span data-i18n="ref">Referenz</span> <input id="refPower" type="number" min="30" max="600" step="5" value="150"> W</label>
+  <label class="pc"><span data-i18n="ref">Pacemaker</span> <input id="refPower" type="number" min="30" max="600" step="5" value="150"> W</label>
   <button id="routeBtn" class="on" data-i18n="route">Route</button>
   <button id="nightBtn" data-i18n="night">Nacht</button>
   <button id="camMode" data-i18n="cam.chase">Kamera: hinter Rad</button>
@@ -89,8 +89,8 @@
   <div class="st lv"><span data-i18n="s.cad">Trittfrequenz</span><b id="sCad">0 U/min</b></div>
   <div class="st lv"><span data-i18n="s.res">Widerstand</span><b id="sRes">–</b></div>
   <div class="st lv"><span data-i18n="s.lap">Runde</span><b id="sLap">1 · 0:00</b></div>
-  <div class="st lv"><span data-i18n="s.ghost">Abstand Geist</span><b id="sGhost">–</b></div>
-  <div class="st lv"><span data-i18n="s.ref">Abstand Referenz</span><b id="sRef">–</b></div>
+  <div class="st"><span data-i18n="s.ghost">Last Round</span><b id="sGhost">–</b></div>
+  <div class="st"><span data-i18n="s.ref">Pacemaker</span><b id="sRef">–</b></div>
   <div class="st lv"><span data-i18n="s.dist">Strecke</span><b id="sDist">–</b></div>
   <div class="st lv"><span data-i18n="s.kcal">Energie</span><b id="sKcal">–</b></div>
   <canvas id="prof" width="236" height="64"></canvas>
@@ -109,8 +109,8 @@ const I18N = {
     route: 'Route', night: 'Nacht', 'cam.chase': 'Kamera: hinter Rad', 'cam.drone': 'Kamera: Drohne', speed: 'Tempo',
     's.grade': 'Steigung', 's.speed': 'Geschwindigkeit', 's.power': 'Leistung', 's.alt': 'Höhe',
     info: 'Kolosseum, Rom · Ausschnitt 3 × 3 km · Gebäude, Straßen, Grünflächen © OpenStreetMap-Mitwirkende (ODbL)',
-    live: 'Live-Ergometer', 'live.pause': 'Pause ❚❚', 'live.go': 'Weiter ▶', 'live.paused': 'Pause', 'live.nodata': 'keine Daten vom Ergometer', 'live.noconn': 'Ergometer nicht verbunden', 'live.demo': 'Demo – kein Ergometer', ref: 'Referenz', 's.ref': 'Abstand Referenz', 'live.ready': 'Bereit – das Rennen startet mit dem ersten Tritt', 'live.save': 'Speichern ⤓', 'live.nothing': 'Noch keine Fahrt aufgezeichnet – das Rennen startet mit dem ersten Tritt.',
-    weight: 'Gewicht (Fahrer + Rad)', 's.cad': 'Trittfrequenz', 's.res': 'Widerstand', 's.lap': 'Runde', 's.ghost': 'Abstand Geist', 's.dist': 'Strecke', 's.kcal': 'Energie', rpm: 'U/min', lap: 'Runde', 'lap.last': 'letzte Runde',
+    live: 'Live-Ergometer', 'live.pause': 'Pause ❚❚', 'live.go': 'Weiter ▶', 'live.paused': 'Pause', 'live.nodata': 'keine Daten vom Ergometer', 'live.noconn': 'Ergometer nicht verbunden', 'live.demo': 'Demo – kein Ergometer', ref: 'Pacemaker', 's.ref': 'Pacemaker', 'live.ready': 'Bereit – das Rennen startet mit dem ersten Tritt', 'live.save': 'Speichern ⤓', 'live.nothing': 'Noch keine Fahrt aufgezeichnet – das Rennen startet mit dem ersten Tritt.',
+    weight: 'Gewicht (Fahrer + Rad)', 's.cad': 'Trittfrequenz', 's.res': 'Widerstand', 's.lap': 'Runde', 's.ghost': 'Last Round', 's.dist': 'Strecke', 's.kcal': 'Energie', rpm: 'U/min', lap: 'Runde', 'lap.last': 'letzte Runde',
     'where.col': 'Rund um das Kolosseum', timelapse: 'Zeitraffer',
     'l.Kolosseum': 'Kolosseum', 'l.Konstantinsbogen': 'Konstantinsbogen', 'l.Forum Romanum': 'Forum Romanum', 'l.Palatin': 'Palatin',
     'l.Tempel der Venus und Roma': 'Tempel der Venus und Roma', 'l.Circus Maximus': 'Circus Maximus', 'l.Kaiserforen': 'Kaiserforen', 'l.Celio': 'Celio',
@@ -122,8 +122,8 @@ const I18N = {
     route: 'Route', night: 'Night', 'cam.chase': 'Camera: behind bike', 'cam.drone': 'Camera: drone', speed: 'Speed',
     's.grade': 'Gradient', 's.speed': 'Speed', 's.power': 'Power', 's.alt': 'Altitude',
     info: 'Colosseum, Rome · 3 × 3 km area · Buildings, roads, green spaces © OpenStreetMap contributors (ODbL)',
-    live: 'Live ergometer', 'live.pause': 'Pause ❚❚', 'live.go': 'Resume ▶', 'live.paused': 'Paused', 'live.nodata': 'no data from the ergometer', 'live.noconn': 'ergometer not connected', 'live.demo': 'Demo – no ergometer', ref: 'Reference', 's.ref': 'Gap to reference', 'live.ready': 'Ready – the race starts with your first pedal stroke', 'live.save': 'Save ⤓', 'live.nothing': 'Nothing recorded yet – the race starts with your first pedal stroke.',
-    weight: 'Weight (rider + bike)', 's.cad': 'Cadence', 's.res': 'Resistance', 's.lap': 'Lap', 's.ghost': 'Gap to ghost', 's.dist': 'Distance', 's.kcal': 'Energy', rpm: 'rpm', lap: 'Lap', 'lap.last': 'last lap',
+    live: 'Live ergometer', 'live.pause': 'Pause ❚❚', 'live.go': 'Resume ▶', 'live.paused': 'Paused', 'live.nodata': 'no data from the ergometer', 'live.noconn': 'ergometer not connected', 'live.demo': 'Demo – no ergometer', ref: 'Pacemaker', 's.ref': 'Pacemaker', 'live.ready': 'Ready – the race starts with your first pedal stroke', 'live.save': 'Save ⤓', 'live.nothing': 'Nothing recorded yet – the race starts with your first pedal stroke.',
+    weight: 'Weight (rider + bike)', 's.cad': 'Cadence', 's.res': 'Resistance', 's.lap': 'Lap', 's.ghost': 'Last Round', 's.dist': 'Distance', 's.kcal': 'Energy', rpm: 'rpm', lap: 'Lap', 'lap.last': 'last lap',
     'where.col': 'Around the Colosseum', timelapse: 'Time-lapse',
     'l.Kolosseum': 'Colosseum', 'l.Konstantinsbogen': 'Arch of Constantine', 'l.Forum Romanum': 'Roman Forum', 'l.Palatin': 'Palatine Hill',
     'l.Tempel der Venus und Roma': 'Temple of Venus and Roma', 'l.Circus Maximus': 'Circus Maximus', 'l.Kaiserforen': 'Imperial Fora', 'l.Celio': 'Caelian Hill',
@@ -135,8 +135,8 @@ const I18N = {
     route: 'Percorso', night: 'Notte', 'cam.chase': 'Camera: dietro la bici', 'cam.drone': 'Camera: drone', speed: 'Velocità',
     's.grade': 'Pendenza', 's.speed': 'Velocità', 's.power': 'Potenza', 's.alt': 'Altitudine',
     info: 'Colosseo, Roma · Area di 3 × 3 km · Edifici, strade, aree verdi © Collaboratori di OpenStreetMap (ODbL)',
-    live: 'Ergometro live', 'live.pause': 'Pausa ❚❚', 'live.go': 'Riprendi ▶', 'live.paused': 'In pausa', 'live.nodata': 'nessun dato dall’ergometro', 'live.noconn': 'ergometro non collegato', 'live.demo': 'Demo – nessun ergometro', ref: 'Riferimento', 's.ref': 'Distacco riferimento', 'live.ready': 'Pronti – la gara parte con la prima pedalata', 'live.save': 'Salva ⤓', 'live.nothing': 'Ancora nessuna corsa registrata – la gara parte con la prima pedalata.',
-    weight: 'Peso (ciclista + bici)', 's.cad': 'Cadenza', 's.res': 'Resistenza', 's.lap': 'Giro', 's.ghost': 'Distacco fantasma', 's.dist': 'Distanza', 's.kcal': 'Energia', rpm: 'giri/min', lap: 'Giro', 'lap.last': 'ultimo giro',
+    live: 'Ergometro live', 'live.pause': 'Pausa ❚❚', 'live.go': 'Riprendi ▶', 'live.paused': 'In pausa', 'live.nodata': 'nessun dato dall’ergometro', 'live.noconn': 'ergometro non collegato', 'live.demo': 'Demo – nessun ergometro', ref: 'Pacemaker', 's.ref': 'Pacemaker', 'live.ready': 'Pronti – la gara parte con la prima pedalata', 'live.save': 'Salva ⤓', 'live.nothing': 'Ancora nessuna corsa registrata – la gara parte con la prima pedalata.',
+    weight: 'Peso (ciclista + bici)', 's.cad': 'Cadenza', 's.res': 'Resistenza', 's.lap': 'Giro', 's.ghost': 'Last Round', 's.dist': 'Distanza', 's.kcal': 'Energia', rpm: 'giri/min', lap: 'Giro', 'lap.last': 'ultimo giro',
     'where.col': 'Intorno al Colosseo', timelapse: 'Accelerazione',
     'l.Kolosseum': 'Colosseo', 'l.Konstantinsbogen': 'Arco di Costantino', 'l.Forum Romanum': 'Foro Romano', 'l.Palatin': 'Palatino',
     'l.Tempel der Venus und Roma': 'Tempio di Venere e Roma', 'l.Circus Maximus': 'Circo Massimo', 'l.Kaiserforen': 'Fori Imperiali', 'l.Celio': 'Celio',
@@ -148,8 +148,8 @@ const I18N = {
     route: 'Itinéraire', night: 'Nuit', 'cam.chase': 'Caméra : derrière le vélo', 'cam.drone': 'Caméra : drone', speed: 'Vitesse',
     's.grade': 'Pente', 's.speed': 'Vitesse', 's.power': 'Puissance', 's.alt': 'Altitude',
     info: 'Colisée, Rome · Zone de 3 × 3 km · Bâtiments, routes, espaces verts © Contributeurs d’OpenStreetMap (ODbL)',
-    live: 'Ergomètre en direct', 'live.pause': 'Pause ❚❚', 'live.go': 'Reprendre ▶', 'live.paused': 'En pause', 'live.nodata': 'aucune donnée de l’ergomètre', 'live.noconn': 'ergomètre non connecté', 'live.demo': 'Démo – pas d’ergomètre', ref: 'Référence', 's.ref': 'Écart référence', 'live.ready': 'Prêt – la course démarre au premier coup de pédale', 'live.save': 'Enregistrer ⤓', 'live.nothing': 'Rien d’enregistré pour l’instant – la course démarre au premier coup de pédale.',
-    weight: 'Poids (cycliste + vélo)', 's.cad': 'Cadence', 's.res': 'Résistance', 's.lap': 'Tour', 's.ghost': 'Écart fantôme', 's.dist': 'Distance', 's.kcal': 'Énergie', rpm: 'tr/min', lap: 'Tour', 'lap.last': 'dernier tour',
+    live: 'Ergomètre en direct', 'live.pause': 'Pause ❚❚', 'live.go': 'Reprendre ▶', 'live.paused': 'En pause', 'live.nodata': 'aucune donnée de l’ergomètre', 'live.noconn': 'ergomètre non connecté', 'live.demo': 'Démo – pas d’ergomètre', ref: 'Pacemaker', 's.ref': 'Pacemaker', 'live.ready': 'Prêt – la course démarre au premier coup de pédale', 'live.save': 'Enregistrer ⤓', 'live.nothing': 'Rien d’enregistré pour l’instant – la course démarre au premier coup de pédale.',
+    weight: 'Poids (cycliste + vélo)', 's.cad': 'Cadence', 's.res': 'Résistance', 's.lap': 'Tour', 's.ghost': 'Last Round', 's.dist': 'Distance', 's.kcal': 'Énergie', rpm: 'tr/min', lap: 'Tour', 'lap.last': 'dernier tour',
     'where.col': 'Autour du Colisée', timelapse: 'Accéléré',
     'l.Kolosseum': 'Colisée', 'l.Konstantinsbogen': 'Arc de Constantin', 'l.Forum Romanum': 'Forum romain', 'l.Palatin': 'Mont Palatin',
     'l.Tempel der Venus und Roma': 'Temple de Vénus et de Rome', 'l.Circus Maximus': 'Cirque Maxime', 'l.Kaiserforen': 'Forums impériaux', 'l.Celio': 'Mont Cælius',
@@ -1615,10 +1615,10 @@ function rideStep(dt) {
     ride.v = Math.min(vHi, Math.max(vLo, v + (P * PHYS.eta / Math.max(v, live ? 0.3 : 1) - F) / (PHYS.m * 1.05) * h));   // live: low gears allow high force when slow
   }
   const P = riderPower(ride.v), ds = ride.v * sim;
-  ride.s = LIVE.on ? ride.s + ds : Math.min(ROUTE_LEN, ride.s + ds);
+  ride.s += ds;
   if (live && LIVE.cad > 0 && sim > 0) { ride.phi += LIVE.cad / 60 * 2 * Math.PI * sim; pedal(ride.phi); }   // the rider's real cadence
   else if (!live && P > 5) { ride.phi += ds / 2.1 * 2 * Math.PI / 2.6; pedal(ride.phi); }   // coasting downhill: no pedalling
-  if (LIVE.on) liveLap(sim, P);                                   // laps, ghost and the ride log, live and in the demo fallback
+  liveLap(sim, P);                                                // laps, last-round ghost, pacemaker (and in live mode the ride log); the ride goes on lap after lap
   for (const w of wheels) w.rotation.x += ds / 0.34;
   const { p, t } = placeBike(dt);
   lionStep(sim);
@@ -1644,11 +1644,15 @@ function rideStep(dt) {
   const dCol = Math.hypot(p.x, p.z), [vx, vd] = vitLocal(p.x, -p.z);
   const where = placeName(p, dCol, vx, vd);
   if (LIVE.on) { liveHud(where); return; }
-  hud.textContent = `${where} · ${fmt(ride.s / 1000, 2)} / ${fmt(ROUTE_LEN / 1000, 2)} km · ${tr('timelapse')} × ${ride.mult}`;
-  if (ride.s >= ROUTE_LEN) { stopRide(true); view('venezia'); }
+  gapHud();
+  hud.textContent = `${where} · ${tr('lap')} ${LIVE.lap} · ${fmt(ride.s / 1000, 2)} / ${fmt(ROUTE_LEN / 1000, 2)} km` +
+    (LIVE.lastLap ? ` · ${tr('lap.last')} ${mmss(LIVE.lastLap)}` : '') + ` · ${tr('timelapse')} × ${ride.mult}`;
 }
 function startRide() {
   if (ride.s >= ROUTE_LEN || ride.s === 0) {
+    if (!LIVE.on) {                                               // normal ride: pacemaker from the start, the last completed lap as the ghost
+      const prev = LIVE.prev; resetRace(); Object.assign(LIVE, { started: true, prev }); REF.v = 2;
+    }
     ride.s = 0; ride.v = 2; ride.mult = 1; ride.heading = null; const { p, t } = placeBike(1);
     LION.d = LION.heading = null; LION.t = LION.phase = 0; LION.v = 2; lionStep(0);
     ride.camYaw = ride.heading + Math.PI; ride.camD = 14; ride.camH = 4; ride.sweepT = 0;   // start in front of the rider, then swing behind
@@ -1818,14 +1822,14 @@ function sAt(tr0, t) {                                            // distance an
   return [a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f];
 }
 function liveLap(sim, P) {
-  if (!LIVE.started) { placeGhost(refRider, 0, 0, 1.4); refRider.visible = true; return; }   // the reference waits at the start line too
+  if (!LIVE.started) { if (LIVE.on) { placeGhost(refRider, 0, 0, 1.4); refRider.visible = true; } return; }   // live: the pacemaker waits at the start line too
   LIVE.startWall ??= Date.now();
   LIVE.lapT += sim; LIVE.raceT += sim;
   const dist = (LIVE.lap - 1) * ROUTE_LEN + ride.s, lr = LIVE.race[LIVE.race.length - 1];
   if (!lr || LIVE.raceT - lr[0] >= 0.2) LIVE.race.push([LIVE.raceT, dist]);
-  if (!LIVE.demo) { LIVE.dist += ride.v * sim; LIVE.kj += P * sim / 1000; }   // distance and work since the race start; pauses add nothing
+  if (LIVE.on && !LIVE.demo) { LIVE.dist += ride.v * sim; LIVE.kj += P * sim / 1000; }   // distance and work since the race start; pauses add nothing
   refStep(sim);
-  logRow(P);                                                      // after refStep: both gap traces have a sample
+  if (LIVE.on) logRow(P);                                         // after refStep: both gap traces have a sample
   const tr0 = LIVE.trace, last = tr0[tr0.length - 1];
   if (!last || LIVE.lapT - last[0] >= 0.2) tr0.push([LIVE.lapT, Math.min(ride.s, ROUTE_LEN), ride.phi]);
   if (ride.s >= ROUTE_LEN) {                                     // lap complete: the ghost takes over this lap
@@ -1884,6 +1888,14 @@ const gapText = (el, gap) => {                                    // + = behind,
   el.textContent = `${gap > 0 ? '+' : gap < 0 ? '−' : ''}${fmt(Math.abs(gap), 1)} s`;
   el.style.color = gap > 0.05 ? '#ff9b7a' : gap < -0.05 ? '#8fd18f' : '';
 };
+function gapHud() {                                               // Last Round (ghost) and Pacemaker gaps, normal and live mode
+  if (LIVE.prev) gapText(LST.ghost, LIVE.lapT - tAt(LIVE.prev, Math.min(ride.s, ROUTE_LEN)));   // + = behind the ghost, − = ahead
+  else { LST.ghost.textContent = '–'; LST.ghost.style.color = ''; }
+  // pacemaker: behind = how long ago it passed the rider's distance; ahead = how long ago the rider passed its distance
+  const dist = (LIVE.lap - 1) * ROUTE_LEN + ride.s;
+  if (LIVE.race.length < 2) { LST.ref.textContent = '–'; LST.ref.style.color = ''; }
+  else gapText(LST.ref, dist <= REF.d ? LIVE.raceT - tAt(REF.trace, dist) : -(LIVE.raceT - tAt(LIVE.race, REF.d)));
+}
 function liveHud(where) {
   const { g } = liveLevel();
   LST.cad.textContent = `${fmt(LIVE.cad)} ${tr('rpm')}`;
@@ -1891,13 +1903,8 @@ function liveHud(where) {
   LST.lap.textContent = `${LIVE.lap} · ${mmss(LIVE.lapT)}`;
   LST.dist.textContent = `${fmt(LIVE.dist / 1000, 2)} km`;
   LST.kcal.textContent = `${fmt(LIVE.kj / 4.185 / 0.25)} kcal`;   // kJ of work to kcal of food at 25 % efficiency, as lauf.py
-  if (LIVE.prev) {                                               // + = behind the ghost, − = ahead
-    gapText(LST.ghost, LIVE.lapT - tAt(LIVE.prev, ride.s));
-  } else LST.ghost.textContent = '–';
+  gapHud();
   // reference: behind = how long ago it passed the rider's distance; ahead = how long ago the rider passed its distance
-  const dist = (LIVE.lap - 1) * ROUTE_LEN + ride.s;
-  if (!LIVE.started || LIVE.race.length < 2) { LST.ref.textContent = '–'; LST.ref.style.color = ''; }
-  else gapText(LST.ref, dist <= REF.d ? LIVE.raceT - tAt(REF.trace, dist) : -(LIVE.raceT - tAt(LIVE.race, REF.d)));
   const extra = !LIVE.started ? tr('live.ready') : LIVE.paused ? tr('live.paused') : LIVE.demo ? `${tr('live.demo')} · ${tr('timelapse')} × ${ride.mult}` : LIVE.status;
   hud.textContent = `${where} · ${tr('lap')} ${LIVE.lap} · ${fmt(ride.s / 1000, 2)} / ${fmt(ROUTE_LEN / 1000, 2)} km` +
     (LIVE.lastLap ? ` · ${tr('lap.last')} ${mmss(LIVE.lastLap)}` : '') + ` · ${g > 0 ? '+' : ''}${fmt(g * 100, 1)} %` + (extra ? ` · ${extra}` : '');
@@ -1917,12 +1924,67 @@ const LABELS = [
 });
 let showLabels = true;
 const tmp = new THREE.Vector3();
+// ---------- fisheye: the scene is rendered into a target and warped on its way to the screen ----------
+// centre magnification: a pixel at distance r from the centre (in units of the half-height) samples the scene at
+// r·((1−k) + k·r²), so near the centre the scene is magnified by 1/(1−k) and towards the edges it is compressed.
+// the scene is rendered with a wider field of view (overscan ov), so the warp always finds scene to sample
+// and the frame has no black border. ?nofisheye turns it off.
+// during the ride the warp is stronger (kRide), so the race in the centre appears larger; the target is then rendered
+// ss times larger so that the magnified centre stays sharp. FISH.cur eases between the two strengths.
+const FISH = { k: 0.2, kRide: 0.4, ss: 1.2, cur: 0.2, on: !new URLSearchParams(location.search).has('nofisheye') };
+const fishRT = new THREE.WebGLRenderTarget(1, 1, { samples: 2 });   // 4 samples cost ~40 % of the frame rate on a Retina screen
+const fishMat = new THREE.ShaderMaterial({
+  uniforms: { tex: { value: fishRT.texture }, k: { value: FISH.k }, aspect: { value: 1 }, ov: { value: 1 } },
+  vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
+  fragmentShader: `uniform sampler2D tex; uniform float k; uniform float aspect; uniform float ov; varying vec2 vUv;
+    void main() {
+      vec2 p = (vUv * 2.0 - 1.0) * vec2(aspect, 1.0);
+      vec2 s = p * ((1.0 - k) + k * dot(p, p));
+      vec2 uv = s / vec2(aspect, 1.0) / ov * 0.5 + 0.5;
+      gl_FragColor = texture2D(tex, clamp(uv, 0.0, 1.0));
+      #include <tonemapping_fragment>
+      #include <colorspace_fragment>
+    }`,
+  depthTest: false, depthWrite: false
+});
+const fishScene = new THREE.Scene(), fishCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+fishScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), fishMat));
+const overCam = new THREE.PerspectiveCamera();
+let sceneInfo = {};
+function drawFrame() {
+  if (!FISH.on) { renderer.render(scene, camera); sceneInfo = { ...renderer.info.render }; return; }
+  FISH.cur += ((ride.on ? FISH.kRide : FISH.k) - FISH.cur) * 0.06; if (Math.abs(FISH.cur - (ride.on ? FISH.kRide : FISH.k)) < 1e-3) FISH.cur = ride.on ? FISH.kRide : FISH.k;
+  const k = FISH.cur, w = renderer.domElement.width, h = renderer.domElement.height, a = w / h;
+  // supersample only at low pixel ratios: on a Retina screen (ratio ≥ 1.5) the centre is sharp enough and the extra pixels would halve the frame rate
+  const ss = renderer.getPixelRatio() >= 1.5 ? 1 : Math.min(1 + (FISH.ss - 1) * THREE.MathUtils.clamp((k - FISH.k) / (FISH.kRide - FISH.k), 0, 1), renderer.capabilities.maxTextureSize / Math.max(w, h));
+  const tw = Math.round(w * ss), th = Math.round(h * ss);
+  if (fishRT.width !== tw || fishRT.height !== th) fishRT.setSize(tw, th);
+  // the warp reaches furthest at the corners: ov = (1−k) + k·(a²+1). Widening the view by ov in tangent space
+  // keeps the same sight lines, so the centre is unchanged and the outer frame shows real scene.
+  const ov = (1 - k) + k * (a * a + 1);
+  overCam.position.copy(camera.position); overCam.quaternion.copy(camera.quaternion);
+  overCam.near = camera.near; overCam.far = camera.far; overCam.aspect = a;
+  overCam.fov = 2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * ov) * 180 / Math.PI;
+  overCam.updateProjectionMatrix();
+  fishMat.uniforms.aspect.value = a; fishMat.uniforms.ov.value = ov; fishMat.uniforms.k.value = k;
+  renderer.setRenderTarget(fishRT); renderer.render(scene, overCam); sceneInfo = { ...renderer.info.render };
+  renderer.setRenderTarget(null); renderer.render(fishScene, fishCam);
+}
+// scene NDC -> screen NDC after the warp (inverse of the shader's mapping, by fixed-point iteration)
+function fishScreen(nx, ny) {
+  if (!FISH.on) return [nx, ny];
+  const a = innerWidth / innerHeight, sx = nx * a, sy = ny;
+  let px = sx, py = sy;
+  for (let i = 0; i < 8; i++) { const f = (1 - FISH.cur) + FISH.cur * (px * px + py * py); px = sx / f; py = sy / f; }
+  return [px / a, py];
+}
 function updateLabels() {
   for (const l of LABELS) {
     tmp.copy(l.p).project(camera);
-    const vis = showLabels && !ride.on && tmp.z < 1 && Math.abs(tmp.x) < 1.05 && Math.abs(tmp.y) < 1.05 && (1 - tmp.y) / 2 * innerHeight > 100;   // keep clear of the toolbar
+    const [fx, fy] = fishScreen(tmp.x, tmp.y);
+    const vis = showLabels && !ride.on && tmp.z < 1 && Math.abs(tmp.x) < 1.05 && Math.abs(tmp.y) < 1.05 && (1 - fy) / 2 * innerHeight > 100;   // keep clear of the toolbar
     l.el.style.display = vis ? '' : 'none';
-    if (vis) l.el.style.transform = `translate(${(tmp.x + 1) / 2 * innerWidth}px, ${(1 - tmp.y) / 2 * innerHeight}px) translate(-50%, -100%)`;
+    if (vis) l.el.style.transform = `translate(${(fx + 1) / 2 * innerWidth}px, ${(1 - fy) / 2 * innerHeight}px) translate(-50%, -100%)`;
   }
 }
 
@@ -1953,7 +2015,7 @@ function screenshot(w, h) {
   const pr = renderer.getPixelRatio();
   renderer.setPixelRatio(1); renderer.setSize(w, h, false);
   camera.aspect = w / h; camera.updateProjectionMatrix();
-  renderer.render(scene, camera);
+  drawFrame();
   const url = renderer.domElement.toDataURL('image/png');
   renderer.setPixelRatio(pr); onResize();
   const a = document.createElement('a'); a.href = url; a.download = `kolosseum_3d_${w}x${h}.png`; a.click();
@@ -2116,7 +2178,7 @@ window.__ready = true;
 const INFO = location.search.includes('info') && { f: 0 };
 const fpsEl = document.getElementById('fps'), fps = { n: 0, t0: performance.now() };
 const clock = new THREE.Clock(), perf = { n: 0, t: 0, slow: 0, fast: 0, dtS: 1 / 60 }, PR_MAX = Math.min(devicePixelRatio, 2);
-if (location.hash === '#ride') { startRide(); for (let i = 0; i < +(new URLSearchParams(location.search).get('t') || 0) * 30; i++) rideStep(1 / 30); }
+if (location.hash === '#ride') { startRide(); for (let i = 0; ride.on && i < +(new URLSearchParams(location.search).get('t') || 0) * 30; i++) rideStep(1 / 30); }
 renderer.setAnimationLoop(() => {
   if (tween) {
     const k = Math.min(1, (performance.now() - tween.s) / 1400), e = k < .5 ? 2 * k * k : 1 - (-2 * k + 2) ** 2 / 2;
@@ -2144,10 +2206,10 @@ renderer.setAnimationLoop(() => {
     else if (perf.fast >= 5 && pr < PR_MAX && !ride.on) { renderer.setPixelRatio(Math.min(PR_MAX, pr + 0.25)); perf.fast = 0; }
     perf.n = perf.t = 0;
   }
-  renderer.render(scene, camera);
+  drawFrame();
   updateLabels();
   if (NIGHT.on) { nightStep(); winStep(dt); }
-  if (INFO && ++INFO.f === 3) console.log('INFO ' + JSON.stringify({ ...renderer.info.render, pr: renderer.getPixelRatio() }));
+  if (INFO && ++INFO.f === 3) console.log('INFO ' + JSON.stringify({ ...sceneInfo, pr: renderer.getPixelRatio() }));
 });
 </script>
 <!-- Besucherzählung (GoatCounter) -->
