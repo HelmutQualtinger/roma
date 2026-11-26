@@ -8,7 +8,7 @@
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://helmutqualtinger.github.io/roma/">
 <meta property="og:title" content="Kolosseum 3D – Rom in Three.js">
-<meta property="og:description" content="2 × 2 km Rom rund um das Kolosseum: prozedurales Kolosseum und Vittoriano, Radfahrt mit Steigung, Leistung und Höhe, Nachtmodus. DE · EN · IT · FR.">
+<meta property="og:description" content="3 × 3 km Rom rund um das Kolosseum: prozedurales Kolosseum und Vittoriano, Radfahrt mit Steigung, Leistung und Höhe, Nachtmodus. DE · EN · IT · FR.">
 <meta property="og:image" content="https://helmutqualtinger.github.io/roma/docs/preview.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -23,6 +23,7 @@
   #stats .st { display: flex; justify-content: space-between; align-items: baseline; padding: 2px 0; }
   #stats .st span { color: rgba(255,255,255,.7); }
   #stats .st b { font-size: 19px; font-variant-numeric: tabular-nums; }
+  #stats #mini { display: block; width: 100%; height: auto; margin-top: 8px; border-radius: 6px; background: rgba(255,255,255,.04); }
   #prof { display: block; margin-top: 6px; width: 236px; height: 64px; }
   @media (max-width: 640px) { #ui { max-width: calc(100% - 24px); } #stats { top: auto; bottom: 84px; } }
   #ui button { font: 13px/1 -apple-system, system-ui, sans-serif; padding: 8px 11px; border: 1px solid rgba(0,0,0,.15); border-radius: 6px; background: rgba(255,255,255,.88); color: #222; cursor: pointer; }
@@ -90,9 +91,12 @@
   <div class="st lv"><span data-i18n="s.lap">Runde</span><b id="sLap">1 · 0:00</b></div>
   <div class="st lv"><span data-i18n="s.ghost">Abstand Geist</span><b id="sGhost">–</b></div>
   <div class="st lv"><span data-i18n="s.ref">Abstand Referenz</span><b id="sRef">–</b></div>
+  <div class="st lv"><span data-i18n="s.dist">Strecke</span><b id="sDist">–</b></div>
+  <div class="st lv"><span data-i18n="s.kcal">Energie</span><b id="sKcal">–</b></div>
   <canvas id="prof" width="236" height="64"></canvas>
+  <canvas id="mini" width="236" height="120"></canvas>
 </div>
-<div id="info" data-i18n="info">Kolosseum, Rom · Ausschnitt 2 × 2 km · Gebäude, Straßen, Grünflächen © OpenStreetMap-Mitwirkende (ODbL)</div>
+<div id="info" data-i18n="info">Kolosseum, Rom · Ausschnitt 3 × 3 km · Gebäude, Straßen, Grünflächen © OpenStreetMap-Mitwirkende (ODbL)</div>
 
 <script>
 // ---------- UI languages ----------
@@ -104,9 +108,9 @@ const I18N = {
     rot: 'Rundflug', lab: 'Beschriftung', 'ride.play': 'Radfahrt ▶', 'ride.pause': 'Radfahrt ❚❚', 'ride.again': 'Radfahrt ↻',
     route: 'Route', night: 'Nacht', 'cam.chase': 'Kamera: hinter Rad', 'cam.drone': 'Kamera: Drohne', speed: 'Tempo',
     's.grade': 'Steigung', 's.speed': 'Geschwindigkeit', 's.power': 'Leistung', 's.alt': 'Höhe',
-    info: 'Kolosseum, Rom · Ausschnitt 2 × 2 km · Gebäude, Straßen, Grünflächen © OpenStreetMap-Mitwirkende (ODbL)',
+    info: 'Kolosseum, Rom · Ausschnitt 3 × 3 km · Gebäude, Straßen, Grünflächen © OpenStreetMap-Mitwirkende (ODbL)',
     live: 'Live-Ergometer', 'live.pause': 'Pause ❚❚', 'live.go': 'Weiter ▶', 'live.paused': 'Pause', 'live.nodata': 'keine Daten vom Ergometer', 'live.noconn': 'Ergometer nicht verbunden', 'live.demo': 'Demo – kein Ergometer', ref: 'Referenz', 's.ref': 'Abstand Referenz', 'live.ready': 'Bereit – das Rennen startet mit dem ersten Tritt', 'live.save': 'Speichern ⤓', 'live.nothing': 'Noch keine Fahrt aufgezeichnet – das Rennen startet mit dem ersten Tritt.',
-    weight: 'Gewicht (Fahrer + Rad)', 's.cad': 'Trittfrequenz', 's.res': 'Widerstand', 's.lap': 'Runde', 's.ghost': 'Abstand Geist', rpm: 'U/min', lap: 'Runde', 'lap.last': 'letzte Runde',
+    weight: 'Gewicht (Fahrer + Rad)', 's.cad': 'Trittfrequenz', 's.res': 'Widerstand', 's.lap': 'Runde', 's.ghost': 'Abstand Geist', 's.dist': 'Strecke', 's.kcal': 'Energie', rpm: 'U/min', lap: 'Runde', 'lap.last': 'letzte Runde',
     'where.col': 'Rund um das Kolosseum', timelapse: 'Zeitraffer',
     'l.Kolosseum': 'Kolosseum', 'l.Konstantinsbogen': 'Konstantinsbogen', 'l.Forum Romanum': 'Forum Romanum', 'l.Palatin': 'Palatin',
     'l.Tempel der Venus und Roma': 'Tempel der Venus und Roma', 'l.Circus Maximus': 'Circus Maximus', 'l.Kaiserforen': 'Kaiserforen', 'l.Celio': 'Celio',
@@ -117,9 +121,9 @@ const I18N = {
     rot: 'Orbit', lab: 'Labels', 'ride.play': 'Bike ride ▶', 'ride.pause': 'Bike ride ❚❚', 'ride.again': 'Bike ride ↻',
     route: 'Route', night: 'Night', 'cam.chase': 'Camera: behind bike', 'cam.drone': 'Camera: drone', speed: 'Speed',
     's.grade': 'Gradient', 's.speed': 'Speed', 's.power': 'Power', 's.alt': 'Altitude',
-    info: 'Colosseum, Rome · 2 × 2 km area · Buildings, roads, green spaces © OpenStreetMap contributors (ODbL)',
+    info: 'Colosseum, Rome · 3 × 3 km area · Buildings, roads, green spaces © OpenStreetMap contributors (ODbL)',
     live: 'Live ergometer', 'live.pause': 'Pause ❚❚', 'live.go': 'Resume ▶', 'live.paused': 'Paused', 'live.nodata': 'no data from the ergometer', 'live.noconn': 'ergometer not connected', 'live.demo': 'Demo – no ergometer', ref: 'Reference', 's.ref': 'Gap to reference', 'live.ready': 'Ready – the race starts with your first pedal stroke', 'live.save': 'Save ⤓', 'live.nothing': 'Nothing recorded yet – the race starts with your first pedal stroke.',
-    weight: 'Weight (rider + bike)', 's.cad': 'Cadence', 's.res': 'Resistance', 's.lap': 'Lap', 's.ghost': 'Gap to ghost', rpm: 'rpm', lap: 'Lap', 'lap.last': 'last lap',
+    weight: 'Weight (rider + bike)', 's.cad': 'Cadence', 's.res': 'Resistance', 's.lap': 'Lap', 's.ghost': 'Gap to ghost', 's.dist': 'Distance', 's.kcal': 'Energy', rpm: 'rpm', lap: 'Lap', 'lap.last': 'last lap',
     'where.col': 'Around the Colosseum', timelapse: 'Time-lapse',
     'l.Kolosseum': 'Colosseum', 'l.Konstantinsbogen': 'Arch of Constantine', 'l.Forum Romanum': 'Roman Forum', 'l.Palatin': 'Palatine Hill',
     'l.Tempel der Venus und Roma': 'Temple of Venus and Roma', 'l.Circus Maximus': 'Circus Maximus', 'l.Kaiserforen': 'Imperial Fora', 'l.Celio': 'Caelian Hill',
@@ -130,9 +134,9 @@ const I18N = {
     rot: 'Volo circolare', lab: 'Etichette', 'ride.play': 'Giro in bici ▶', 'ride.pause': 'Giro in bici ❚❚', 'ride.again': 'Giro in bici ↻',
     route: 'Percorso', night: 'Notte', 'cam.chase': 'Camera: dietro la bici', 'cam.drone': 'Camera: drone', speed: 'Velocità',
     's.grade': 'Pendenza', 's.speed': 'Velocità', 's.power': 'Potenza', 's.alt': 'Altitudine',
-    info: 'Colosseo, Roma · Area di 2 × 2 km · Edifici, strade, aree verdi © Collaboratori di OpenStreetMap (ODbL)',
+    info: 'Colosseo, Roma · Area di 3 × 3 km · Edifici, strade, aree verdi © Collaboratori di OpenStreetMap (ODbL)',
     live: 'Ergometro live', 'live.pause': 'Pausa ❚❚', 'live.go': 'Riprendi ▶', 'live.paused': 'In pausa', 'live.nodata': 'nessun dato dall’ergometro', 'live.noconn': 'ergometro non collegato', 'live.demo': 'Demo – nessun ergometro', ref: 'Riferimento', 's.ref': 'Distacco riferimento', 'live.ready': 'Pronti – la gara parte con la prima pedalata', 'live.save': 'Salva ⤓', 'live.nothing': 'Ancora nessuna corsa registrata – la gara parte con la prima pedalata.',
-    weight: 'Peso (ciclista + bici)', 's.cad': 'Cadenza', 's.res': 'Resistenza', 's.lap': 'Giro', 's.ghost': 'Distacco fantasma', rpm: 'giri/min', lap: 'Giro', 'lap.last': 'ultimo giro',
+    weight: 'Peso (ciclista + bici)', 's.cad': 'Cadenza', 's.res': 'Resistenza', 's.lap': 'Giro', 's.ghost': 'Distacco fantasma', 's.dist': 'Distanza', 's.kcal': 'Energia', rpm: 'giri/min', lap: 'Giro', 'lap.last': 'ultimo giro',
     'where.col': 'Intorno al Colosseo', timelapse: 'Accelerazione',
     'l.Kolosseum': 'Colosseo', 'l.Konstantinsbogen': 'Arco di Costantino', 'l.Forum Romanum': 'Foro Romano', 'l.Palatin': 'Palatino',
     'l.Tempel der Venus und Roma': 'Tempio di Venere e Roma', 'l.Circus Maximus': 'Circo Massimo', 'l.Kaiserforen': 'Fori Imperiali', 'l.Celio': 'Celio',
@@ -143,9 +147,9 @@ const I18N = {
     rot: 'Survol', lab: 'Étiquettes', 'ride.play': 'Balade à vélo ▶', 'ride.pause': 'Balade à vélo ❚❚', 'ride.again': 'Balade à vélo ↻',
     route: 'Itinéraire', night: 'Nuit', 'cam.chase': 'Caméra : derrière le vélo', 'cam.drone': 'Caméra : drone', speed: 'Vitesse',
     's.grade': 'Pente', 's.speed': 'Vitesse', 's.power': 'Puissance', 's.alt': 'Altitude',
-    info: 'Colisée, Rome · Zone de 2 × 2 km · Bâtiments, routes, espaces verts © Contributeurs d’OpenStreetMap (ODbL)',
+    info: 'Colisée, Rome · Zone de 3 × 3 km · Bâtiments, routes, espaces verts © Contributeurs d’OpenStreetMap (ODbL)',
     live: 'Ergomètre en direct', 'live.pause': 'Pause ❚❚', 'live.go': 'Reprendre ▶', 'live.paused': 'En pause', 'live.nodata': 'aucune donnée de l’ergomètre', 'live.noconn': 'ergomètre non connecté', 'live.demo': 'Démo – pas d’ergomètre', ref: 'Référence', 's.ref': 'Écart référence', 'live.ready': 'Prêt – la course démarre au premier coup de pédale', 'live.save': 'Enregistrer ⤓', 'live.nothing': 'Rien d’enregistré pour l’instant – la course démarre au premier coup de pédale.',
-    weight: 'Poids (cycliste + vélo)', 's.cad': 'Cadence', 's.res': 'Résistance', 's.lap': 'Tour', 's.ghost': 'Écart fantôme', rpm: 'tr/min', lap: 'Tour', 'lap.last': 'dernier tour',
+    weight: 'Poids (cycliste + vélo)', 's.cad': 'Cadence', 's.res': 'Résistance', 's.lap': 'Tour', 's.ghost': 'Écart fantôme', 's.dist': 'Distance', 's.kcal': 'Énergie', rpm: 'tr/min', lap: 'Tour', 'lap.last': 'dernier tour',
     'where.col': 'Autour du Colisée', timelapse: 'Accéléré',
     'l.Kolosseum': 'Colisée', 'l.Konstantinsbogen': 'Arc de Constantin', 'l.Forum Romanum': 'Forum romain', 'l.Palatin': 'Mont Palatin',
     'l.Tempel der Venus und Roma': 'Temple de Vénus et de Rome', 'l.Circus Maximus': 'Cirque Maxime', 'l.Kaiserforen': 'Forums impériaux', 'l.Celio': 'Mont Cælius',
@@ -218,7 +222,7 @@ renderer.shadowMap.autoUpdate = false;
 const SUN_DIR = sun.position.clone().normalize();
 const L_F = SUN_DIR.clone().negate(), L_R = new THREE.Vector3().crossVectors(L_F, new THREE.Vector3(0, 1, 0)).normalize(), L_U = new THREE.Vector3().crossVectors(L_R, L_F);
 const SHADOW = {
-  overview: { size: Math.min(8192, renderer.capabilities.maxTextureSize), half: 1150, dist: 1600, depth: 1600, normalBias: 0.5 },
+  overview: { size: Math.min(8192, renderer.capabilities.maxTextureSize), half: 1600, dist: 2200, depth: 2200, normalBias: 0.5 },
   ride: { size: 4096, half: 220, dist: 900, depth: 450, normalBias: 0.08 },
 };
 let shadowMode = null;
@@ -1546,6 +1550,19 @@ const profBase = (() => {                                       // static profil
   g.fillText(`${Math.round(hi + BASE)} m`, 4, 12); g.fillText(`${Math.round(lo + BASE)} m`, 4, h - 4);
   return { c, X, Y };
 })();
+// overview map under the stats: the whole route in outline, drawn once; the rider is a blinking red dot
+const mapCv = document.getElementById('mini'), mc = mapCv.getContext('2d');
+const mapBase = (() => {
+  const c = document.createElement('canvas'); c.width = mapCv.width; c.height = mapCv.height;
+  const g = c.getContext('2d'), w = c.width, h = c.height;
+  const pts = route.getSpacedPoints(400).map(p => [p.x, -p.z]);   // north up, as in the page's coordinates
+  const x0 = Math.min(...pts.map(p => p[0])), x1 = Math.max(...pts.map(p => p[0])), y0 = Math.min(...pts.map(p => p[1])), y1 = Math.max(...pts.map(p => p[1]));
+  const k = Math.min((w - 16) / (x1 - x0), (h - 16) / (y1 - y0)), ox = (w - (x1 - x0) * k) / 2, oy = (h - (y1 - y0) * k) / 2;
+  const X = x => ox + (x - x0) * k, Y = y => h - oy - (y - y0) * k;
+  g.beginPath(); pts.forEach(([x, y], i) => g[i ? 'lineTo' : 'moveTo'](X(x), Y(y))); g.closePath();
+  g.strokeStyle = '#e6ff00'; g.lineWidth = 2.5; g.lineJoin = 'round'; g.stroke();
+  return { c, X, Y };
+})();
 const fmt = (v, d = 0) => v.toLocaleString(LOCALE[LANG], { minimumFractionDigits: d, maximumFractionDigits: d });
 function updateStats(grade, v, P, alt) {
   STAT.grade.textContent = `${grade > 0.0005 ? '+' : ''}${fmt(grade * 100, 1)} %`;
@@ -1556,6 +1573,29 @@ function updateStats(grade, v, P, alt) {
   pc.clearRect(0, 0, profCv.width, profCv.height); pc.drawImage(profBase.c, 0, 0);
   const i = ride.s / PROF_STEP, x = profBase.X(i), y = profBase.Y(profAt(PROF, ride.s));
   pc.fillStyle = '#ffd34d'; pc.beginPath(); pc.arc(x, y, 4, 0, 7); pc.fill();
+  mc.clearRect(0, 0, mapCv.width, mapCv.height); mc.drawImage(mapBase.c, 0, 0);
+  if (Math.floor(performance.now() / 500) % 2 === 0) {          // blinks: on for half a second, off for half a second
+    const q = route.getPointAt(Math.min(1, ride.s / ROUTE_LEN));
+    mc.fillStyle = '#ff2a2a'; mc.beginPath(); mc.arc(mapBase.X(q.x), mapBase.Y(-q.z), 5.5, 0, 7); mc.fill();
+  }
+}
+// where the rider is, for the HUD. The tour: Piazza Venezia -> Via del Teatro di Marcello -> Bocca della Verità -> Circo
+// Massimo (Via dei Cerchi) -> Porta Capena -> Via di San Gregorio -> around the Colosseum -> Via degli Annibaldi -> Via Cavour
+// -> Termini (Piazza dei Cinquecento) -> Piazza della Repubblica -> Via Nazionale -> Via Quattro Novembre -> Piazza Venezia.
+// The legs are told apart by the route distance where the rider first reaches the Colosseum and Termini
+const routeS = (test) => { for (let d = 0; d <= ROUTE_LEN; d += 5) { const q = route.getPointAt(d / ROUTE_LEN); if (test(q.x, -q.z)) return d; } return ROUTE_LEN; };
+const S_COL = routeS((x, y) => Math.hypot(x, y) < 190), S_TERMINI = routeS((x, y) => Math.hypot(x - 600, y - 1200) < 60);
+function placeName(p, dCol, vx, vd) {
+  const qx = p.x, qy = -p.z, near = (x, y, r) => Math.hypot(qx - x, qy - y) < r;
+  if (dCol < 190) return tr('where.col');
+  if (vd < 40 && Math.abs(vx) < 160) return 'Piazza Venezia · Altare della Patria';
+  if (near(600, 1220, 170)) return 'Stazione Termini · Piazza dei Cinquecento';
+  if (near(320, 1375, 110)) return 'Piazza della Repubblica';
+  if (near(375, 900, 90)) return "Piazza dell'Esquilino · Santa Maria Maggiore";
+  if (ride.s < S_COL) return near(-605, -468, 330) ? 'Circo Massimo' : qy < -150 && qx > -330 ? 'Via di San Gregorio'
+    : qy < 150 && qx < -600 && qx > -900 ? 'Via Petroselli · Bocca della Verità' : 'Via del Teatro di Marcello';
+  if (ride.s < S_TERMINI) return qy < 420 && qx < -20 ? 'Via degli Annibaldi' : 'Via Cavour';
+  return qx > -440 ? 'Via Nazionale' : qx > -520 ? 'Largo Magnanapoli' : 'Via Quattro Novembre';
 }
 function rideStep(dt) {
   const live = LIVE.on && !LIVE.demo;                             // measured power; in the demo fallback the simulated rider rides
@@ -1602,10 +1642,7 @@ function rideStep(dt) {
   setShadow('ride', p.clone().addScaledVector(t, 120));   // shadow window reaches further ahead than behind
   updateStats(grade, ride.v, P, p.y - RIDE_Y + BASE);
   const dCol = Math.hypot(p.x, p.z), [vx, vd] = vitLocal(p.x, -p.z);
-  const [qx, qy] = [p.x, -p.z], dCirc = Math.hypot(qx + 605, qy + 468);
-  const where = dCol < 190 ? tr('where.col') : vd < 40 && Math.abs(vx) < 160 ? 'Piazza Venezia · Altare della Patria'
-    : dCirc < 330 ? 'Circo Massimo' : qx < -820 ? 'Via del Teatro di Marcello' : qy < -150 && qx > -330 ? 'Via di San Gregorio'
-    : qy < 150 && qx < -600 ? 'Via Petroselli · Bocca della Verità' : 'Via dei Fori Imperiali';
+  const where = placeName(p, dCol, vx, vd);
   if (LIVE.on) { liveHud(where); return; }
   hud.textContent = `${where} · ${fmt(ride.s / 1000, 2)} / ${fmt(ROUTE_LEN / 1000, 2)} km · ${tr('timelapse')} × ${ride.mult}`;
   if (ride.s >= ROUTE_LEN) { stopRide(true); view('venezia'); }
@@ -1616,7 +1653,7 @@ function startRide() {
     LION.d = LION.heading = null; LION.t = LION.phase = 0; LION.v = 2; lionStep(0);
     ride.camYaw = ride.heading + Math.PI; ride.camD = 14; ride.camH = 4; ride.sweepT = 0;   // start in front of the rider, then swing behind
   }
-  ride.on = true; bike.visible = lion.visible = true; routeLine.getObjectByName('overview').visible = false; camera.fov = 62; camera.near = 0.5; camera.far = 2600; scene.fog.near = 700; scene.fog.far = 2500; camera.updateProjectionMatrix(); controls.enabled = false; controls.autoRotate = false; tween = null;
+  ride.on = true; bike.visible = lion.visible = true; routeLine.getObjectByName('overview').visible = false; camera.fov = 93; camera.near = 0.5; camera.far = 2600; scene.fog.near = 700; scene.fog.far = 2500; camera.updateProjectionMatrix(); controls.enabled = false; controls.autoRotate = false; tween = null;
   hud.style.display = ''; document.getElementById('stats').style.display = ''; document.getElementById('ride').classList.add('on'); setT(document.getElementById('ride'), 'ride.pause');
 }
 function stopRide(done = false) {
@@ -1640,7 +1677,7 @@ const RES_AHEAD = 100;                                            // m; long eno
 const gradeAhead = s => (profAt(PROF, (s + RES_AHEAD) % ROUTE_LEN) - profAt(PROF, s)) / RES_AHEAD;   // the loop closes at the start
 const GA = (() => { const a = []; for (let d = 0; d < ROUTE_LEN; d += PROF_STEP) a.push(gradeAhead(d)); a.sort((x, y) => x - y);
   return [a[Math.floor(a.length * 0.02)], a[Math.floor(a.length * 0.98)]]; })();
-const LIVE = { log: [], startWall: null, on: false, paused: false, ok: false, next: 0, power: 0, cad: 0, res: null, seen: 0, sent: null, lastSend: 0, status: '',
+const LIVE = { log: [], startWall: null, dist: 0, kj: 0, on: false, paused: false, ok: false, next: 0, power: 0, cad: 0, res: null, seen: 0, sent: null, lastSend: 0, status: '',
   demo: false, started: false, raceT: 0, race: [], lap: 1, lapT: 0, trace: [], prev: null, best: null, lastLap: null, timer: null };
 const liveBtn = document.getElementById('liveBtn'), pauseBtn = document.getElementById('livePause'), weightIn = document.getElementById('weight');
 try { const w = +localStorage.getItem('roma.weight'); if (w >= 30 && w <= 200) weightIn.value = w; } catch { }
@@ -1720,7 +1757,7 @@ function setDemo(on) {
 }
 // the race: rider at the start line, no laps and no ghost yet; it starts with the first pedal stroke (LIVE.started, see rideStep)
 function resetRace() {
-  Object.assign(LIVE, { started: false, startWall: null, log: [], hr: null, raceT: 0, race: [], lap: 1, lapT: 0, trace: [], prev: null, best: null, lastLap: null });
+  Object.assign(LIVE, { started: false, startWall: null, dist: 0, kj: 0, log: [], hr: null, raceT: 0, race: [], lap: 1, lapT: 0, trace: [], prev: null, best: null, lastLap: null });
   Object.assign(REF, { d: 0, v: 0, phi: 0, trace: [[0, 0]] });
   ride.s = 0; ride.v = 0; ride.heading = null; ghost.visible = false; refRider.visible = false;
   LION.d = LION.heading = null; LION.t = LION.phase = 0; LION.v = 0;
@@ -1786,6 +1823,7 @@ function liveLap(sim, P) {
   LIVE.lapT += sim; LIVE.raceT += sim;
   const dist = (LIVE.lap - 1) * ROUTE_LEN + ride.s, lr = LIVE.race[LIVE.race.length - 1];
   if (!lr || LIVE.raceT - lr[0] >= 0.2) LIVE.race.push([LIVE.raceT, dist]);
+  if (!LIVE.demo) { LIVE.dist += ride.v * sim; LIVE.kj += P * sim / 1000; }   // distance and work since the race start; pauses add nothing
   refStep(sim);
   logRow(P);                                                      // after refStep: both gap traces have a sample
   const tr0 = LIVE.trace, last = tr0[tr0.length - 1];
@@ -1841,7 +1879,7 @@ function saveRide() {
 }
 document.getElementById('liveSave').onclick = saveRide;
 const mmss = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
-const LST = { cad: document.getElementById('sCad'), res: document.getElementById('sRes'), lap: document.getElementById('sLap'), ghost: document.getElementById('sGhost'), ref: document.getElementById('sRef') };
+const LST = { dist: document.getElementById('sDist'), kcal: document.getElementById('sKcal'), cad: document.getElementById('sCad'),res: document.getElementById('sRes'), lap: document.getElementById('sLap'), ghost: document.getElementById('sGhost'), ref: document.getElementById('sRef') };
 const gapText = (el, gap) => {                                    // + = behind, − = ahead
   el.textContent = `${gap > 0 ? '+' : gap < 0 ? '−' : ''}${fmt(Math.abs(gap), 1)} s`;
   el.style.color = gap > 0.05 ? '#ff9b7a' : gap < -0.05 ? '#8fd18f' : '';
@@ -1851,6 +1889,8 @@ function liveHud(where) {
   LST.cad.textContent = `${fmt(LIVE.cad)} ${tr('rpm')}`;
   LST.res.textContent = `${LIVE.res ?? '–'} (${RES_LO}–${RES_HI})`;
   LST.lap.textContent = `${LIVE.lap} · ${mmss(LIVE.lapT)}`;
+  LST.dist.textContent = `${fmt(LIVE.dist / 1000, 2)} km`;
+  LST.kcal.textContent = `${fmt(LIVE.kj / 4.185 / 0.25)} kcal`;   // kJ of work to kcal of food at 25 % efficiency, as lauf.py
   if (LIVE.prev) {                                               // + = behind the ghost, − = ahead
     gapText(LST.ghost, LIVE.lapT - tAt(LIVE.prev, ride.s));
   } else LST.ghost.textContent = '–';
@@ -1869,6 +1909,7 @@ const LABELS = [
   ['Palatin', 41.88905, 12.48740, 50], ['Tempel der Venus und Roma', 41.89085, 12.48895, 30], ['Circus Maximus', 41.88610, 12.48510, 20],
   ['Vittoriano', 41.89440, 12.48300, 88], ['Palazzo Venezia', 41.89625, 12.48170, 48], ['Colle Oppio / Domus Aurea', 41.89290, 12.49560, 30], ['San Clemente', 41.88940, 12.49760, 35],
   ['Kaiserforen', 41.89430, 12.48700, 30], ['Celio', 41.88570, 12.49380, 30],
+  ['Stazione Termini', 41.90100, 12.50160, 35], ['Santa Maria Maggiore', 41.89760, 12.49850, 80], ['Piazza della Repubblica', 41.90270, 12.49660, 30],
 ].map(([name, lat, lon, h]) => {
   const [x, y] = ll(lat, lon), el = document.createElement('div');
   if (I18N.de['l.' + name]) setT(el, 'l.' + name); else el.textContent = name; document.getElementById('labels').appendChild(el);
