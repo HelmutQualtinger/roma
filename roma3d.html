@@ -64,6 +64,7 @@
   </select>
   <button id="rot" data-i18n="rot">Rundflug</button>
   <button id="lab" class="on" data-i18n="lab">Beschriftung</button>
+  <button id="modeBtn" data-i18n="mode.bike">Rad 🚴</button>
   <button id="ride" data-i18n="ride.play">Radfahrt ▶</button>
   <button id="liveBtn" data-i18n="live">Live-Ergometer</button>
   <button id="livePause" class="lv" data-i18n="live.pause">Pause ❚❚</button>
@@ -72,6 +73,7 @@
   <label class="pc"><span data-i18n="ref">Pacemaker</span> <input id="refPower" type="number" min="30" max="600" step="5" value="150"> W</label>
   <button id="routeBtn" class="on" data-i18n="route">Route</button>
   <button id="nightBtn" data-i18n="night">Nacht</button>
+  <button id="musicBtn" data-i18n="music">Musik ♪</button><input id="musicFile" type="file" accept="audio/*" hidden>
   <button id="camMode" data-i18n="cam.chase">Kamera: hinter Rad</button>
   <label id="spd"><span data-i18n="speed">Tempo</span> <input id="speed" type="range" min="1" max="10" step="1" value="3"></label>
   <button id="shot">Screenshot 4K</button>
@@ -106,7 +108,7 @@ const I18N = {
     title: 'Kolosseum 3D', place: 'Orte …', load: 'Szene wird aufgebaut …',
     'v.ge': 'Google-Earth-Ansicht', 'v.close': 'Kolosseum nah', 'v.arco': 'Konstantinsbogen', 'v.top': 'Draufsicht',
     rot: 'Rundflug', lab: 'Beschriftung', 'ride.play': 'Radfahrt ▶', 'ride.pause': 'Radfahrt ❚❚', 'ride.again': 'Radfahrt ↻',
-    route: 'Route', night: 'Nacht', 'cam.chase': 'Kamera: hinter Rad', 'cam.drone': 'Kamera: Drohne', speed: 'Tempo',
+    route: 'Route', 'mode.bike': 'Rad 🚴', 'mode.run': 'Laufen 🏃', 'mode.tip': 'Radfahrer oder Läufer (Geist und Pacemaker wechseln mit)', night: 'Nacht', music: 'Musik ♪', 'music.tip': 'Hintergrundmusik in Schleife; Shift-Klick wählt eine andere Datei', 'cam.chase': 'Kamera: hinter Rad', 'cam.drone': 'Kamera: Drohne', speed: 'Tempo',
     's.grade': 'Steigung', 's.speed': 'Geschwindigkeit', 's.power': 'Leistung', 's.alt': 'Höhe',
     info: 'Kolosseum, Rom · Ausschnitt 3 × 3 km · Gebäude, Straßen, Grünflächen © OpenStreetMap-Mitwirkende (ODbL)',
     live: 'Live-Ergometer', 'live.pause': 'Pause ❚❚', 'live.go': 'Weiter ▶', 'live.paused': 'Pause', 'live.nodata': 'keine Daten vom Ergometer', 'live.noconn': 'Ergometer nicht verbunden', 'live.demo': 'Demo – kein Ergometer', ref: 'Pacemaker', 's.ref': 'Pacemaker', 'live.ready': 'Bereit – das Rennen startet mit dem ersten Tritt', 'live.save': 'Speichern ⤓', 'live.nothing': 'Noch keine Fahrt aufgezeichnet – das Rennen startet mit dem ersten Tritt.',
@@ -114,12 +116,14 @@ const I18N = {
     'where.col': 'Rund um das Kolosseum', timelapse: 'Zeitraffer',
     'l.Kolosseum': 'Kolosseum', 'l.Konstantinsbogen': 'Konstantinsbogen', 'l.Forum Romanum': 'Forum Romanum', 'l.Palatin': 'Palatin',
     'l.Tempel der Venus und Roma': 'Tempel der Venus und Roma', 'l.Circus Maximus': 'Circus Maximus', 'l.Kaiserforen': 'Kaiserforen', 'l.Celio': 'Celio', 'l.Trevi-Brunnen': 'Trevi-Brunnen', 'l.Pantheon': 'Pantheon',
+    // runner mode: tr() prefers key + '.run' (no word of a bike while running)
+    'ride.play.run': 'Lauf ▶', 'ride.pause.run': 'Lauf ❚❚', 'ride.again.run': 'Lauf ↻', 'cam.chase.run': 'Kamera: hinter Läufer', 'weight.run': 'Gewicht (Läufer)', 's.cad.run': 'Schrittfrequenz', 'rpm.run': 'Schritte/min', 'live.ready.run': 'Bereit – das Rennen startet mit dem ersten Schritt', 'live.nothing.run': 'Noch nichts aufgezeichnet – das Rennen startet mit dem ersten Schritt.', 'mode.tip.run': 'Läufer (Geist und Pacemaker laufen mit); Klick wechselt den Modus',
   },
   en: {
     title: 'Colosseum 3D', place: 'Places …', load: 'Building scene …',
     'v.ge': 'Google Earth view', 'v.close': 'Colosseum close-up', 'v.arco': 'Arch of Constantine', 'v.top': 'Top view',
     rot: 'Orbit', lab: 'Labels', 'ride.play': 'Bike ride ▶', 'ride.pause': 'Bike ride ❚❚', 'ride.again': 'Bike ride ↻',
-    route: 'Route', night: 'Night', 'cam.chase': 'Camera: behind bike', 'cam.drone': 'Camera: drone', speed: 'Speed',
+    route: 'Route', 'mode.bike': 'Bike 🚴', 'mode.run': 'Run 🏃', 'mode.tip': 'Cyclist or runner (ghost and pacemaker follow)', night: 'Night', music: 'Music ♪', 'music.tip': 'Background music in a loop; Shift-click picks another file', 'cam.chase': 'Camera: behind bike', 'cam.drone': 'Camera: drone', speed: 'Speed',
     's.grade': 'Gradient', 's.speed': 'Speed', 's.power': 'Power', 's.alt': 'Altitude',
     info: 'Colosseum, Rome · 3 × 3 km area · Buildings, roads, green spaces © OpenStreetMap contributors (ODbL)',
     live: 'Live ergometer', 'live.pause': 'Pause ❚❚', 'live.go': 'Resume ▶', 'live.paused': 'Paused', 'live.nodata': 'no data from the ergometer', 'live.noconn': 'ergometer not connected', 'live.demo': 'Demo – no ergometer', ref: 'Pacemaker', 's.ref': 'Pacemaker', 'live.ready': 'Ready – the race starts with your first pedal stroke', 'live.save': 'Save ⤓', 'live.nothing': 'Nothing recorded yet – the race starts with your first pedal stroke.',
@@ -127,12 +131,14 @@ const I18N = {
     'where.col': 'Around the Colosseum', timelapse: 'Time-lapse',
     'l.Kolosseum': 'Colosseum', 'l.Konstantinsbogen': 'Arch of Constantine', 'l.Forum Romanum': 'Roman Forum', 'l.Palatin': 'Palatine Hill',
     'l.Tempel der Venus und Roma': 'Temple of Venus and Roma', 'l.Circus Maximus': 'Circus Maximus', 'l.Kaiserforen': 'Imperial Fora', 'l.Celio': 'Caelian Hill', 'l.Trevi-Brunnen': 'Trevi Fountain', 'l.Pantheon': 'Pantheon',
+    // runner mode: tr() prefers key + '.run' (no word of a bike while running)
+    'ride.play.run': 'Run ▶', 'ride.pause.run': 'Run ❚❚', 'ride.again.run': 'Run ↻', 'cam.chase.run': 'Camera: behind runner', 'weight.run': 'Weight (runner)', 's.cad.run': 'Step rate', 'rpm.run': 'steps/min', 'live.ready.run': 'Ready – the race starts with your first step', 'live.nothing.run': 'Nothing recorded yet – the race starts with your first step.', 'mode.tip.run': 'Runner (ghost and pacemaker run too); click to switch mode',
   },
   it: {
     title: 'Colosseo 3D', place: 'Luoghi …', load: 'Costruzione della scena …',
     'v.ge': 'Vista Google Earth', 'v.close': 'Colosseo da vicino', 'v.arco': 'Arco di Costantino', 'v.top': 'Vista dall’alto',
     rot: 'Volo circolare', lab: 'Etichette', 'ride.play': 'Giro in bici ▶', 'ride.pause': 'Giro in bici ❚❚', 'ride.again': 'Giro in bici ↻',
-    route: 'Percorso', night: 'Notte', 'cam.chase': 'Camera: dietro la bici', 'cam.drone': 'Camera: drone', speed: 'Velocità',
+    route: 'Percorso', 'mode.bike': 'Bici 🚴', 'mode.run': 'Corsa 🏃', 'mode.tip': 'Ciclista o corridore (fantasma e pacemaker seguono)', night: 'Notte', music: 'Musica ♪', 'music.tip': 'Musica di sottofondo in loop; Maiusc-clic sceglie un altro file', 'cam.chase': 'Camera: dietro la bici', 'cam.drone': 'Camera: drone', speed: 'Velocità',
     's.grade': 'Pendenza', 's.speed': 'Velocità', 's.power': 'Potenza', 's.alt': 'Altitudine',
     info: 'Colosseo, Roma · Area di 3 × 3 km · Edifici, strade, aree verdi © Collaboratori di OpenStreetMap (ODbL)',
     live: 'Ergometro live', 'live.pause': 'Pausa ❚❚', 'live.go': 'Riprendi ▶', 'live.paused': 'In pausa', 'live.nodata': 'nessun dato dall’ergometro', 'live.noconn': 'ergometro non collegato', 'live.demo': 'Demo – nessun ergometro', ref: 'Pacemaker', 's.ref': 'Pacemaker', 'live.ready': 'Pronti – la gara parte con la prima pedalata', 'live.save': 'Salva ⤓', 'live.nothing': 'Ancora nessuna corsa registrata – la gara parte con la prima pedalata.',
@@ -140,12 +146,14 @@ const I18N = {
     'where.col': 'Intorno al Colosseo', timelapse: 'Accelerazione',
     'l.Kolosseum': 'Colosseo', 'l.Konstantinsbogen': 'Arco di Costantino', 'l.Forum Romanum': 'Foro Romano', 'l.Palatin': 'Palatino',
     'l.Tempel der Venus und Roma': 'Tempio di Venere e Roma', 'l.Circus Maximus': 'Circo Massimo', 'l.Kaiserforen': 'Fori Imperiali', 'l.Celio': 'Celio', 'l.Trevi-Brunnen': 'Fontana di Trevi', 'l.Pantheon': 'Pantheon',
+    // runner mode: tr() prefers key + '.run' (no word of a bike while running)
+    'ride.play.run': 'Corsa ▶', 'ride.pause.run': 'Corsa ❚❚', 'ride.again.run': 'Corsa ↻', 'cam.chase.run': 'Camera: dietro il corridore', 'weight.run': 'Peso (corridore)', 's.cad.run': 'Frequenza dei passi', 'rpm.run': 'passi/min', 'live.ready.run': 'Pronti – la gara parte con il primo passo', 'live.nothing.run': 'Ancora nessuna corsa registrata – la gara parte con il primo passo.', 'mode.tip.run': 'Corridore (fantasma e pacemaker corrono anche loro); clic per cambiare modalità',
   },
   fr: {
     title: 'Colisée 3D', place: 'Lieux …', load: 'Construction de la scène …',
     'v.ge': 'Vue Google Earth', 'v.close': 'Colisée de près', 'v.arco': 'Arc de Constantin', 'v.top': 'Vue de dessus',
     rot: 'Survol', lab: 'Étiquettes', 'ride.play': 'Balade à vélo ▶', 'ride.pause': 'Balade à vélo ❚❚', 'ride.again': 'Balade à vélo ↻',
-    route: 'Itinéraire', night: 'Nuit', 'cam.chase': 'Caméra : derrière le vélo', 'cam.drone': 'Caméra : drone', speed: 'Vitesse',
+    route: 'Itinéraire', 'mode.bike': 'Vélo 🚴', 'mode.run': 'Course 🏃', 'mode.tip': 'Cycliste ou coureur (fantôme et pacemaker suivent)', night: 'Nuit', music: 'Musique ♪', 'music.tip': 'Musique de fond en boucle ; Maj-clic choisit un autre fichier', 'cam.chase': 'Caméra : derrière le vélo', 'cam.drone': 'Caméra : drone', speed: 'Vitesse',
     's.grade': 'Pente', 's.speed': 'Vitesse', 's.power': 'Puissance', 's.alt': 'Altitude',
     info: 'Colisée, Rome · Zone de 3 × 3 km · Bâtiments, routes, espaces verts © Contributeurs d’OpenStreetMap (ODbL)',
     live: 'Ergomètre en direct', 'live.pause': 'Pause ❚❚', 'live.go': 'Reprendre ▶', 'live.paused': 'En pause', 'live.nodata': 'aucune donnée de l’ergomètre', 'live.noconn': 'ergomètre non connecté', 'live.demo': 'Démo – pas d’ergomètre', ref: 'Pacemaker', 's.ref': 'Pacemaker', 'live.ready': 'Prêt – la course démarre au premier coup de pédale', 'live.save': 'Enregistrer ⤓', 'live.nothing': 'Rien d’enregistré pour l’instant – la course démarre au premier coup de pédale.',
@@ -153,13 +161,16 @@ const I18N = {
     'where.col': 'Autour du Colisée', timelapse: 'Accéléré',
     'l.Kolosseum': 'Colisée', 'l.Konstantinsbogen': 'Arc de Constantin', 'l.Forum Romanum': 'Forum romain', 'l.Palatin': 'Mont Palatin',
     'l.Tempel der Venus und Roma': 'Temple de Vénus et de Rome', 'l.Circus Maximus': 'Cirque Maxime', 'l.Kaiserforen': 'Forums impériaux', 'l.Celio': 'Mont Cælius', 'l.Trevi-Brunnen': 'Fontaine de Trevi', 'l.Pantheon': 'Panthéon',
+    // runner mode: tr() prefers key + '.run' (no word of a bike while running)
+    'ride.play.run': 'Course ▶', 'ride.pause.run': 'Course ❚❚', 'ride.again.run': 'Course ↻', 'cam.chase.run': 'Caméra : derrière le coureur', 'weight.run': 'Poids (coureur)', 's.cad.run': 'Fréquence de pas', 'rpm.run': 'pas/min', 'live.ready.run': 'Prêt – la course démarre au premier pas', 'live.nothing.run': 'Rien d’enregistré pour l’instant – la course démarre au premier pas.', 'mode.tip.run': 'Coureur (fantôme et pacemaker courent aussi) ; clic pour changer de mode',
   },
 };
 const LOCALE = { de: 'de-DE', en: 'en-GB', it: 'it-IT', fr: 'fr-FR' };
 const pickLang = (...c) => c.find(l => l in I18N);
 let LANG = pickLang(new URLSearchParams(location.search).get('lang'), (() => { try { return localStorage.getItem('lang'); } catch { } })(),
   ...navigator.languages.map(l => l.slice(0, 2)), 'de');
-const tr = k => I18N[LANG][k] ?? I18N.de[k] ?? k;
+let UI_RUN = false;                                               // runner mode (set by setMode in the module)
+const tr = k => (UI_RUN && (I18N[LANG][k + '.run'] ?? I18N.de[k + '.run'])) || (I18N[LANG][k] ?? I18N.de[k] ?? k);
 const setT = (el, k) => { el.dataset.i18n = k; el.textContent = tr(k); };
 function applyLang(l) {
   LANG = l; document.documentElement.lang = l; document.title = tr('title'); document.getElementById('lang').value = l;
@@ -1611,17 +1622,91 @@ function pedal(phi, set = legs) {
 pedal(0);
 bike.visible = false;
 
-// ghost rider (Live-Ergometer, from the second lap): a translucent red copy of bike and rider that replays the previous lap.
-// The clone shares the geometry; its legs, shoes, cranks and wheels are found by walking both trees in parallel
-// The reference rider (blue) is a second copy that rides at a constant, adjustable power with the rider's weight
-function makeGhost(color, emissive) {
-  const g = bike.clone(true);
-  const mG = new THREE.MeshLambertMaterial({ color, emissive, transparent: true, opacity: 0.42 });
-  const a = [], b = []; bike.traverse(o => a.push(o)); g.traverse(o => b.push(o));
+// ---------- runner mode: the gladiator on foot (local: y up, z forward, soles at y = 0) ----------
+// runBody (pelvis, torso, belt, loincloth, head with galea) leans forward about the hip and bobs with the stride; legs and arms
+// are rods set every frame by runPose(phase, amplitude): thigh swing ±0.5 rad, knee flexion high in the swing and slight in
+// stance, the lower foot is kept on the ground, arms swing against the legs with the elbows bent at about 85°
+const runner = new THREE.Group(), runLean = new THREE.Group(), runBody = new THREE.Group();
+runner.add(runLean); runLean.add(runBody); scene.add(runner); runner.visible = false;
+const rAdd = (o, parent = runLean) => { o.castShadow = true; parent.add(o); return o; };
+const rRod = (r0, r1, m) => rAdd(new THREE.Mesh(new THREE.CylinderGeometry(r1, r0, 1, 12), m));
+const rBall = (r, m, p, s, parent = runBody) => { const o = rAdd(new THREE.Mesh(new THREE.SphereGeometry(r, 16, 12), m), parent); o.position.copy(p); if (s) o.scale.set(...s); return o; };
+{ // body in hip space (origin = centre between the hip joints)
+  const cap = (a, b, r, m, sx = 1) => { const o = rAdd(new THREE.Mesh(new THREE.CapsuleGeometry(r, Math.max(0.01, a.distanceTo(b) - 2 * r), 6, 14), m), runBody); setRod(o, a, b); o.scale.x = sx; };
+  cap(V(-0.1, 0.02, 0), V(0.1, 0.02, 0), 0.1, mLinen);                                      // loincloth
+  const flap = rAdd(new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.2, 0.02), mLinen), runBody); flap.position.set(0, -0.07, 0.09);
+  cap(V(0, 0.08, -0.01), V(0, 0.42, 0.0), 0.13, mSkin, 1.3);                                 // bare torso
+  rBall(1, mSkin, V(0, 0.46, 0), [0.22, 0.08, 0.11]);                                         // shoulders
+  const belt = rAdd(new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.09, 24, 1, true), mBronze), runBody); belt.position.set(0, 0.1, 0); belt.scale.set(1.25, 1, 0.95);
+  const neck = rAdd(new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.05, 0.1, 12), mSkin), runBody); neck.position.set(0, 0.55, 0.01);
+  rBall(0.095, mSkin, V(0, 0.67, 0.02), [0.92, 1, 1.08]);                                     // head
+  rBall(0.118, mBronze, V(0, 0.69, 0.015), [1, 1.05, 1.12]).geometry = new THREE.SphereGeometry(0.118, 24, 12, 0, Math.PI * 2, 0, Math.PI * 0.62);   // galea bowl
+  const brim = rAdd(new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.2, 0.012, 36), mBronze), runBody); brim.position.set(0, 0.635, 0.01);
+  for (let i = 0; i < 4; i++) { const b = rAdd(new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.006, 0.006), mIron), runBody); b.position.set(0, 0.6 + i * 0.022, 0.11); }   // face grille
+  rBall(1, mCrest, V(0, 0.84, -0.01), [0.028, 0.065, 0.17]);                                  // crest
+  const sh = rAdd(new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.02, 32), mCrest), runBody);   // small round shield on the back
+  sh.position.set(0, 0.28, -0.15); sh.rotation.x = Math.PI / 2;
+}
+const RUNP = {
+  body: runBody, lean: runLean,
+  legs: [-1, 1].map(sx => {
+    const foot = rAdd(new THREE.Group());
+    rAdd(new THREE.Mesh(new THREE.BoxGeometry(0.085, 0.02, 0.25), mLeather), foot).position.set(0, -0.06, 0.06);   // sandal
+    const toe = rAdd(new THREE.Mesh(new THREE.SphereGeometry(0.043, 12, 8), mSkin), foot); toe.position.set(0, -0.035, 0.11); toe.scale.set(1, 0.75, 1.9);
+    return { sx, foot, thigh: rRod(0.085, 0.065, sx < 0 ? mSkin : mSkin), knee: rAdd(new THREE.Mesh(new THREE.SphereGeometry(0.05, 12, 10), mSkin)),
+      shin: sx < 0 ? rRod(0.058, 0.045, mBronze) : rRod(0.05, 0.035, mSkin) };   // greave on the left shin
+  }),
+  arms: [-1, 1].map(sx => ({ sx, upper: sx > 0 ? rRod(0.056, 0.05, mBronze) : rRod(0.05, 0.04, mSkin),   // manica on the right arm
+    elbow: rAdd(new THREE.Mesh(new THREE.SphereGeometry(0.042, 12, 10), sx > 0 ? mBronze : mSkin)), fore: rRod(0.04, 0.032, sx > 0 ? mBronze : mSkin),
+    hand: rAdd(new THREE.Mesh(new THREE.SphereGeometry(0.036, 12, 10), mLeather)) })),
+};
+const RUN_LT = 0.45, RUN_LS = 0.46, RUN_LU = 0.29, RUN_LF = 0.27;
+const strideLen = v => THREE.MathUtils.clamp(0.9 + 0.45 * v, 1.2, 3.4);   // m per double step: ~2.2 m at 3 m/s (about 160 steps/min)
+const gaitAmp = v => THREE.MathUtils.clamp(v / 2.2, 0, 1);       // standing still at 0, full stride from a jog on
+const _h = new THREE.Vector3(), _k = new THREE.Vector3(), _a = new THREE.Vector3(), _s = new THREE.Vector3(), _e = new THREE.Vector3(), _w = new THREE.Vector3();
+function runPose(phi, amp, P = RUNP) {
+  const lean = 0.06 + 0.12 * amp, cl = Math.cos(lean), sl = Math.sin(lean);
+  const legs = P.legs.map(L => {                                  // hip-relative joints; right leg half a stride behind the left
+    const ph = phi + (L.sx > 0 ? Math.PI : 0), psi = ((ph + Math.PI / 2) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI), swing = psi < Math.PI;
+    const th = amp * 0.5 * Math.sin(ph), kf = 0.15 + amp * (swing ? 1.5 * Math.sin(psi) ** 1.2 : 0.35 * Math.sin(psi - Math.PI));
+    const knee = V(L.sx * 0.1, -RUN_LT * Math.cos(th), RUN_LT * Math.sin(th)), a2 = th - kf;
+    const ankle = knee.clone().add(V(0, -RUN_LS * Math.cos(a2), RUN_LS * Math.sin(a2)));
+    return { L, knee, ankle, swing, kf, ph };
+  });
+  const hipY = 0.08 - Math.min(...legs.map(l => l.ankle.y)) + 0.035 * amp * (0.5 + 0.5 * Math.cos(2 * phi));   // lower foot on the ground, short flight
+  P.body.position.set(0, hipY, 0); P.body.rotation.x = lean;
+  for (const { L, knee, ankle, swing, kf } of legs) {
+    _h.set(L.sx * 0.09, hipY, 0); _k.copy(knee).setY(knee.y + hipY); _a.copy(ankle).setY(ankle.y + hipY);
+    setRod(L.thigh, _h, _k); L.knee.position.copy(_k); setRod(L.shin, _k, _a);
+    L.foot.position.copy(_a); L.foot.rotation.x = swing ? -(kf - 0.15) * 0.45 : 0;
+  }
+  for (const A of P.arms) {                                       // arm swings with the opposite leg
+    const ph = phi + (A.sx > 0 ? 0 : Math.PI), ta = amp * 0.55 * Math.sin(ph) + lean * 0.5;
+    _s.set(A.sx * 0.2, hipY + 0.46 * cl, 0.46 * sl);               // shoulder after the lean of the torso
+    _e.set(A.sx * 0.23, _s.y - RUN_LU * Math.cos(ta), _s.z + RUN_LU * Math.sin(ta));
+    const tf = ta + 1.45; _w.set(A.sx * 0.16, _e.y - RUN_LF * Math.cos(tf), _e.z + RUN_LF * Math.sin(tf));
+    setRod(A.upper, _s, _e); A.elbow.position.copy(_e); setRod(A.fore, _e, _w); A.hand.position.copy(_w);
+  }
+}
+runPose(0, 0);
+
+// ghost rider (Live-Ergometer, from the second lap): a translucent red copy that replays the previous lap.
+// The reference rider (blue) is a second copy that rides at a constant, adjustable power with the rider's weight.
+// Each is a group with a copy of the bike and of the runner (the mode decides which one shows); the copies share the
+// geometry, their moving parts are found by walking both trees in parallel
+function cloneParts(src, mG) {
+  const c = src.clone(true), a = [], b = []; src.traverse(o => a.push(o)); c.traverse(o => b.push(o));
   const M = new Map(a.map((o, i) => [o, b[i]]));
-  g.traverse(o => { if (o.isMesh) { o.material = mG; o.castShadow = o.receiveShadow = false; } });
-  g.userData.legs = legs.map(L => Object.fromEntries(Object.entries(L).map(([k, v]) => [k, M.get(v) ?? v])));
-  g.userData.wheels = wheels.map(w => M.get(w));
+  c.traverse(o => { if (o.isMesh) { o.material = mG; o.castShadow = o.receiveShadow = false; } });
+  c.visible = true; return [c, o => M.get(o) ?? o];
+}
+function makeGhost(color, emissive) {
+  const g = new THREE.Group(), mG = new THREE.MeshLambertMaterial({ color, emissive, transparent: true, opacity: 0.42 });
+  const [gb, mb] = cloneParts(bike, mG), [gr, mr] = cloneParts(runner, mG);
+  g.add(gb, gr);
+  g.userData = { bike: gb, run: gr, legs: legs.map(L => Object.fromEntries(Object.entries(L).map(([k, v]) => [k, mb(v)]))), wheels: wheels.map(mb),
+    runParts: { body: mr(runBody), lean: mr(runLean), legs: RUNP.legs.map(L => Object.fromEntries(Object.entries(L).map(([k, v]) => [k, mr(v)]))),
+      arms: RUNP.arms.map(A => Object.fromEntries(Object.entries(A).map(([k, v]) => [k, mr(v)]))) } };
   g.renderOrder = 4; g.visible = false; scene.add(g);
   return g;
 }
@@ -2005,6 +2090,22 @@ function powerAt(v, g) {
   const th = Math.atan(g), w = PHYS.m * 9.81;
   return (PHYS.crr * w * Math.cos(th) + w * Math.sin(th) + 0.5 * PHYS.rho * PHYS.cda * v * v) * v / PHYS.eta;
 }
+// running physics (runner mode): running power P = m·v·(ECOR + g·grade·k) + ½ρ·CdA·v³, as running power meters count it.
+// ECOR ≈ 1 J/(kg·m) is the cost of running on the flat; uphill the full lift counts (k = 1), downhill only half of it is
+// saved (k = 0.5) and the cost never falls below 45 % of the flat cost. The mass is the rider's weight without the bike
+// (#weight is rider + bike). Speed follows the power without coasting: it eases towards runSpeed() with RUNP.tau.
+// The same power gives a runner about a third of the cyclist's speed (180 W, 79 kg: 8.2 km/h on the flat).
+const MODE_KEY = 'roma.mode', BIKE_KG = 9;
+let MODE = new URLSearchParams(location.search).has('run') ? 'run' : (() => { try { return localStorage.getItem(MODE_KEY) === 'run' ? 'run' : 'bike'; } catch { return 'bike'; } })();
+const RUNP_PHYS = { ecor: 1.0, cda: 0.24, vMax: 6.5, tau: 1.2 };
+const runMass = () => Math.max(30, PHYS.m - BIKE_KG);
+const runPower = (v, g, m) => m * v * Math.max(0.45 * RUNP_PHYS.ecor, RUNP_PHYS.ecor + 9.81 * g * (g >= 0 ? 1 : 0.5)) + 0.5 * PHYS.rho * RUNP_PHYS.cda * v ** 3;
+function runSpeed(P, g, m = runMass()) {                          // inverse of runPower by bisection
+  if (!(P > 0)) return 0;
+  let lo = 0, hi = RUNP_PHYS.vMax; if (runPower(hi, g, m) <= P) return hi;
+  for (let i = 0; i < 30; i++) { const mid = (lo + hi) / 2; if (runPower(mid, g, m) > P) hi = mid; else lo = mid; }
+  return lo;
+}
 
 function placeBike(dt) {
   // heading from the chord ±2 m around the rider (robust at junction corners), then smoothed so the bike never turns sideways
@@ -2021,6 +2122,7 @@ function placeBike(dt) {
   ride.pitch += (-Math.atan(profAt(GRADE, ride.s)) - ride.pitch) * Math.min(1, dt * 4);
   bike.position.copy(p);
   bike.rotation.set(ride.pitch, ride.heading, 0, 'YXZ'); lean.rotation.z = ride.lean;
+  runner.position.copy(p); runner.rotation.set(0, ride.heading, 0); runLean.rotation.z = ride.lean * 0.4;
   return { p, t: new THREE.Vector3(Math.sin(ride.heading), 0, Math.cos(ride.heading)) };
 }
 const look = new THREE.Vector3();
@@ -2120,19 +2222,22 @@ function rideStep(dt) {
   // Live-Ergometer: the race (clock, laps, the ghost's reference time) starts with the first pedal stroke; in the demo at once
   if (LIVE.on && !LIVE.started && (LIVE.demo || LIVE.cad > 0)) LIVE.started = true;
   const sim = LIVE.on && (LIVE.paused || !LIVE.started) ? 0 : dt * ride.mult, th = Math.atan(grade), W = PHYS.m * 9.81;
-  const riderPower = live ? () => LIVE.power : v => v < PHYS.vMax - 0.4 ? Math.max(PHYS.P, v < PHYS.vMin + 0.3 ? powerAt(PHYS.vMin, grade) : 0) : 0;
+  const running = MODE === 'run';                                 // runner: the power (measured or the demo's) sets the speed directly
+  const riderPower = live ? () => LIVE.power : running ? () => PHYS.P : v => v < PHYS.vMax - 0.4 ? Math.max(PHYS.P, v < PHYS.vMin + 0.3 ? powerAt(PHYS.vMin, grade) : 0) : 0;
   const vHi = live ? 22 : PHYS.vMax, vLo = live ? 0 : 0.5;
-  for (let k = 0, n = Math.ceil(sim / 0.02); k < n; k++) {
+  if (running) ride.v += (runSpeed(riderPower(), grade) - ride.v) * (1 - Math.exp(-sim / RUNP_PHYS.tau));
+  else for (let k = 0, n = Math.ceil(sim / 0.02); k < n; k++) {
     const h = sim / n, v = ride.v, P = riderPower(v);
     const F = PHYS.crr * W * Math.cos(th) * Math.min(1, v * 4) + W * Math.sin(th) + 0.5 * PHYS.rho * PHYS.cda * v * v;
     ride.v = Math.min(vHi, Math.max(vLo, v + (P * PHYS.eta / Math.max(v, live ? 0.3 : 1) - F) / (PHYS.m * 1.05) * h));   // live: low gears allow high force when slow
   }
   const P = riderPower(ride.v), ds = ride.v * sim;
   ride.s += ds;
-  if (live && LIVE.cad > 0 && sim > 0) { ride.phi += LIVE.cad / 60 * 2 * Math.PI * sim; pedal(ride.phi); }   // the rider's real cadence
+  if (running) { ride.phi += ds / strideLen(ride.v) * 2 * Math.PI; runPose(ride.phi, gaitAmp(ride.v)); }   // stride phase from the distance
+  else if (live && LIVE.cad > 0 && sim > 0) { ride.phi += LIVE.cad / 60 * 2 * Math.PI * sim; pedal(ride.phi); }   // the rider's real cadence
   else if (!live && P > 5) { ride.phi += ds / 2.1 * 2 * Math.PI / 2.6; pedal(ride.phi); }   // coasting downhill: no pedalling
   liveLap(sim, P);                                                // laps, last-round ghost, pacemaker (and in live mode the ride log); the ride goes on lap after lap
-  for (const w of wheels) w.rotation.x += ds / 0.34;
+  if (!running) for (const w of wheels) w.rotation.x += ds / 0.34;
   const { p, t } = placeBike(dt);
   lionStep(sim);
   const drone = ride.cam === 'drone';
@@ -2164,6 +2269,8 @@ function rideStep(dt) {
   hud.textContent = `${where} · ${tr('lap')} ${LIVE.lap} · ${fmt(ride.s / 1000, 2)} / ${fmt(ROUTE_LEN / 1000, 2)} km` +
     (LIVE.lastLap ? ` · ${tr('lap.last')} ${mmss(LIVE.lastLap)}` : '') + ` · ${tr('timelapse')} × ${ride.mult}`;
 }
+let riderShown = false;                                           // the rider stays in the scene after the first ride
+const showRider = () => { bike.visible = riderShown && MODE === 'bike'; runner.visible = riderShown && MODE === 'run'; };
 function startRide() {
   if (ride.s >= ROUTE_LEN || ride.s === 0) {
     if (!LIVE.on) {                                               // normal ride: pacemaker from the start, the last completed lap as the ghost
@@ -2173,13 +2280,25 @@ function startRide() {
     LION.d = LION.heading = null; LION.t = LION.phase = 0; LION.v = 2; lionStep(0);
     ride.camYaw = ride.heading + Math.PI; ride.camD = 14; ride.camF = null; ride.camH = 4; ride.sweepT = 0;   // start in front of the rider, then swing behind
   }
-  ride.on = true; bike.visible = lion.visible = true; routeLine.getObjectByName('overview').visible = false; camera.fov = 93; camera.near = 0.5; camera.far = 2600; scene.fog.near = 700; scene.fog.far = 2500; camera.updateProjectionMatrix(); controls.enabled = false; controls.autoRotate = false; tween = null;
+  ride.on = true; riderShown = true; showRider(); lion.visible = true; routeLine.getObjectByName('overview').visible = false; camera.fov = 93; camera.near = 0.5; camera.far = 2600; scene.fog.near = 700; scene.fog.far = 2500; camera.updateProjectionMatrix(); controls.enabled = false; controls.autoRotate = false; tween = null;
   hud.style.display = ''; document.getElementById('stats').style.display = ''; document.getElementById('ride').classList.add('on'); setT(document.getElementById('ride'), 'ride.pause');
 }
 function stopRide(done = false) {
   ride.on = false; controls.enabled = true; routeLine.getObjectByName('overview').visible = true; setShadow('overview'); camera.fov = 35; camera.near = 3; camera.far = 9000; scene.fog.near = 2200; scene.fog.far = 6500; camera.updateProjectionMatrix(); controls.target.copy(bike.position); controls.update();
   document.getElementById('ride').classList.remove('on'); setT(document.getElementById('ride'), done ? 'ride.again' : 'ride.play');
 }
+// runner or cyclist: the rider, the last-round ghost and the pacemaker switch together; the choice is saved (?run forces it)
+const modeBtn = document.getElementById('modeBtn');
+const setMode = (m, save = true) => {
+  MODE = m; if (save) try { localStorage.setItem(MODE_KEY, m); } catch { }
+  UI_RUN = m === 'run'; applyLang(LANG);                             // every data-i18n text, in its runner variant where there is one
+  document.getElementById('weight').value = UI_RUN ? PHYS.m - BIKE_KG : PHYS.m;   // the field shows the runner without the bike
+  setT(modeBtn, m === 'run' ? 'mode.run' : 'mode.bike'); modeBtn.classList.toggle('on', m === 'run'); modeBtn.title = tr('mode.tip');
+  showRider(); if (m === 'run') runPose(ride.phi, gaitAmp(ride.v));
+  for (const g of [ghost, refRider]) { g.userData.bike.visible = m !== 'run'; g.userData.run.visible = m === 'run'; }
+};
+modeBtn.onclick = () => setMode(MODE === 'run' ? 'bike' : 'run');
+setMode(MODE, false);                                            // ?run only for this visit, not saved
 document.getElementById('routeBtn').onclick = e => { routeLine.visible = !routeLine.visible; e.target.classList.toggle('on', routeLine.visible); };
 document.getElementById('ride').onclick = () => ride.on ? stopRide() : startRide();
 document.getElementById('camMode').onclick = e => { ride.cam = ride.cam === 'chase' ? 'drone' : 'chase'; setT(e.target, ride.cam === 'chase' ? 'cam.chase' : 'cam.drone'); };
@@ -2200,11 +2319,12 @@ const GA = (() => { const a = []; for (let d = 0; d < ROUTE_LEN; d += PROF_STEP)
 const LIVE = { log: [], startWall: null, dist: 0, kj: 0, on: false, paused: false, ok: false, next: 0, power: 0, cad: 0, res: null, seen: 0, sent: null, lastSend: 0, status: '',
   demo: false, started: false, raceT: 0, race: [], lap: 1, lapT: 0, trace: [], prev: null, best: null, lastLap: null, timer: null };
 const liveBtn = document.getElementById('liveBtn'), pauseBtn = document.getElementById('livePause'), weightIn = document.getElementById('weight');
-try { const w = +localStorage.getItem('roma.weight'); if (w >= 30 && w <= 200) weightIn.value = w; } catch { }
-PHYS.m = +weightIn.value;
+// PHYS.m and the saved value are rider + bike; in runner mode the field shows and takes the runner alone (− BIKE_KG)
+let w0 = 88; try { const w = +localStorage.getItem('roma.weight'); if (w >= 30 && w <= 200) w0 = w; } catch { }
+PHYS.m = w0; weightIn.value = UI_RUN ? w0 - BIKE_KG : w0;
 weightIn.onchange = () => {
-  const w = THREE.MathUtils.clamp(+weightIn.value || 88, 30, 200); weightIn.value = w; PHYS.m = w;
-  try { localStorage.setItem('roma.weight', w); } catch { }
+  const w = THREE.MathUtils.clamp(+weightIn.value || (UI_RUN ? 88 - BIKE_KG : 88), 30, 200); weightIn.value = w; PHYS.m = UI_RUN ? w + BIKE_KG : w;
+  try { localStorage.setItem('roma.weight', PHYS.m); } catch { }
 };
 // reference rider: constant power (#refPower, saved), the same weight and physics as the rider, from the race start on.
 // It keeps its own total distance REF.d over all laps and a trace [race time, distance] for the gap in seconds
@@ -2217,7 +2337,12 @@ refIn.onchange = () => {
 };
 function refStep(sim) {
   const W = PHYS.m * 9.81;
-  for (let k = 0, n = Math.ceil(sim / 0.02); k < n; k++) {
+  if (MODE === 'run') for (let k = 0, n = Math.ceil(sim / 0.05); k < n; k++) {   // runner: same running physics and mass as the rider
+    const h = sim / n;
+    REF.v += (runSpeed(REF.P, profAt(GRADE, REF.d % ROUTE_LEN)) - REF.v) * (1 - Math.exp(-h / RUNP_PHYS.tau));
+    REF.d += REF.v * h; REF.phi += REF.v * h / strideLen(REF.v) * 2 * Math.PI;
+  }
+  else for (let k = 0, n = Math.ceil(sim / 0.02); k < n; k++) {
     const h = sim / n, v = REF.v, th = Math.atan(profAt(GRADE, REF.d % ROUTE_LEN));
     const F = PHYS.crr * W * Math.cos(th) * Math.min(1, v * 4) + W * Math.sin(th) + 0.5 * PHYS.rho * PHYS.cda * v * v;
     REF.v = Math.min(22, Math.max(0, v + (REF.P * PHYS.eta / Math.max(v, 0.3) - F) / (PHYS.m * 1.05) * h));
@@ -2370,9 +2495,11 @@ function placeGhost(g, s, phi, side) {                            // 'side' metr
   const pa = route.getPointAt(Math.max(0, u - 2 / L)), pb = route.getPointAt(Math.min(1, u + 2 / L)), h = Math.atan2(pb.x - pa.x, pb.z - pa.z);
   p.x -= Math.cos(h) * side; p.z += Math.sin(h) * side;
   p.y = gh(p.x, -p.z) + RIDE_Y + routeEx(s);
-  g.position.copy(p); g.rotation.set(-Math.atan(profAt(GRADE, s)), h, 0, 'YXZ');
-  pedal(phi, g.userData.legs);
-  for (const w of g.userData.wheels) w.rotation.x = s / 0.34;
+  const U = g.userData, run = MODE === 'run'; U.bike.visible = !run; U.run.visible = run;
+  g.position.copy(p); g.rotation.set(run ? 0 : -Math.atan(profAt(GRADE, s)), h, 0, 'YXZ');
+  if (run) { runPose(phi, 1, U.runParts); return; }
+  pedal(phi, U.legs);
+  for (const w of U.wheels) w.rotation.x = s / 0.34;
 }
 // ride log since the race start, one row per second of race time (pauses excluded), saved as CSV by #liveSave
 function logRow(P) {
@@ -2382,16 +2509,16 @@ function logRow(P) {
   const refGap = dist <= REF.d ? LIVE.raceT - tAt(REF.trace, dist) : -(LIVE.raceT - tAt(LIVE.race, REF.d));
   LIVE.log.push({ t: LIVE.raceT, wall: Date.now(), lap: LIVE.lap, dist, v: ride.v, P, cad: LIVE.demo ? null : LIVE.cad, res: LIVE.demo ? null : LIVE.res,
     hr: LIVE.demo ? null : LIVE.hr, grade: profAt(GRADE, ride.s), alt: profAt(PROF, ride.s) + BASE, lat: LAT0 + y / KY, lon: LON0 + x / KX,
-    ghost: LIVE.prev ? LIVE.lapT - tAt(LIVE.prev, ride.s) : null, ref: refGap, refP: REF.P, m: PHYS.m, demo: LIVE.demo });
+    ghost: LIVE.prev ? LIVE.lapT - tAt(LIVE.prev, ride.s) : null, ref: refGap, refP: REF.P, m: PHYS.m, demo: LIVE.demo, sport: MODE === 'run' ? 'run' : 'bike' });
 }
 function saveRide() {
   if (!LIVE.log.length) { alert(tr('live.nothing')); return; }
   const n = (v, d) => v === null || v === undefined || !isFinite(v) ? '' : v.toFixed(d);
   const head = ['time', 'seconds', 'lap', 'distance_m', 'speed_kmh', 'power_w', 'cadence_rpm', 'resistance', 'heart_rate_bpm',
-    'grade_pct', 'altitude_m', 'lat', 'lon', 'gap_ghost_s', 'gap_reference_s', 'reference_power_w', 'weight_kg', 'mode'];
+    'grade_pct', 'altitude_m', 'lat', 'lon', 'gap_ghost_s', 'gap_reference_s', 'reference_power_w', 'weight_kg', 'mode', 'sport'];
   const local = ms => { const d = new Date(ms); return new Date(ms - d.getTimezoneOffset() * 60000).toISOString().slice(0, 23); };   // local time, like the ergometer logs
   const rows = LIVE.log.map(r => [local(r.wall), n(r.t, 1), r.lap, n(r.dist, 1), n(r.v * 3.6, 2), n(r.P, 0), n(r.cad, 0), r.res ?? '',
-    r.hr ?? '', n(r.grade * 100, 2), n(r.alt, 1), n(r.lat, 6), n(r.lon, 6), n(r.ghost, 1), n(r.ref, 1), r.refP, r.m, r.demo ? 'demo' : 'live'].join(','));
+    r.hr ?? '', n(r.grade * 100, 2), n(r.alt, 1), n(r.lat, 6), n(r.lon, 6), n(r.ghost, 1), n(r.ref, 1), r.refP, r.m, r.demo ? 'demo' : 'live', r.sport].join(','));
   const d = new Date(LIVE.startWall), z = v => String(v).padStart(2, '0');
   const name = `roma-ride-${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}-${z(d.getHours())}-${z(d.getMinutes())}.csv`;
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([[head.join(','), ...rows].join('\n') + '\n'], { type: 'text/csv' }));
@@ -2414,7 +2541,7 @@ function gapHud() {                                               // Last Round 
 }
 function liveHud(where) {
   const { g } = liveLevel();
-  LST.cad.textContent = `${fmt(LIVE.cad)} ${tr('rpm')}`;
+  LST.cad.textContent = `${fmt(UI_RUN ? (ride.v > 0.05 ? 2 * ride.v / strideLen(ride.v) * 60 : 0) : LIVE.cad)} ${tr('rpm')}`;   // runner: steps per minute
   LST.res.textContent = `${LIVE.res ?? '–'} (${RES_LO}–${RES_HI})`;
   LST.lap.textContent = `${LIVE.lap} · ${mmss(LIVE.lapT)}`;
   LST.dist.textContent = `${fmt(LIVE.dist / 1000, 2)} km`;
@@ -2728,7 +2855,40 @@ function nightStep() {                                             // stars foll
 }
 document.getElementById('nightBtn').onclick = () => setNight(!NIGHT.on);
 
-for (const o of scene.children) if (o !== bike && o !== lion && o !== ghost && o !== refRider && o !== sun && o !== sun.target && o !== NIGHT.objs)
+// ---------- background music in a loop ----------
+// Default: MUSIC.def, a local file next to the page (git-ignored: *.mp3 is never committed, so GitHub Pages has none).
+// A file picked with Shift-click (or when the default is missing) is kept in IndexedDB ('roma', store 'music') and
+// takes precedence on later visits. Click: play/pause; Shift-click: pick another file.
+const MUSIC = { el: new Audio(), on: false, url: null, def: 'data/eyeOfTheToger.mp3' };
+MUSIC.el.loop = true; MUSIC.el.volume = 0.5;
+const musicBtn = document.getElementById('musicBtn'), musicFile = document.getElementById('musicFile');
+musicBtn.title = tr('music.tip');
+const musicDB = () => new Promise((res, rej) => { const r = indexedDB.open('roma', 1); r.onupgradeneeded = () => r.result.createObjectStore('music'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+async function musicLoad() {
+  try { const db = await musicDB(); return await new Promise(res => { const q = db.transaction('music').objectStore('music').get('file'); q.onsuccess = () => res(q.result || null); q.onerror = () => res(null); }); }
+  catch { return null; }
+}
+async function musicStore(file) { try { (await musicDB()).transaction('music', 'readwrite').objectStore('music').put(file, 'file'); } catch { /* private mode: plays, but is not kept */ } }
+const musicState = on => { MUSIC.on = on; musicBtn.classList.toggle('on', on); };
+function musicPlay(blob) {
+  if (MUSIC.url) URL.revokeObjectURL(MUSIC.url);
+  MUSIC.url = URL.createObjectURL(blob); MUSIC.el.src = MUSIC.url;
+  MUSIC.el.play().then(() => musicState(true)).catch(() => musicState(false));
+  musicBtn.title = (blob.name ? blob.name + ' – ' : '') + tr('music.tip');
+}
+musicFile.onchange = () => { const f = musicFile.files[0]; if (f) { musicStore(f); musicPlay(f); } musicFile.value = ''; };
+musicBtn.onclick = async e => {
+  if (e.shiftKey) { musicFile.click(); return; }
+  if (MUSIC.on) { MUSIC.el.pause(); musicState(false); return; }
+  if (MUSIC.el.src) { MUSIC.el.play().then(() => musicState(true)).catch(() => {}); return; }
+  const f = await musicLoad();
+  if (f) { musicPlay(f); return; }
+  MUSIC.el.src = MUSIC.def;                                       // the default file; if it is missing, let the user pick one
+  MUSIC.el.play().then(() => { musicState(true); musicBtn.title = MUSIC.def.split('/').pop() + ' – ' + tr('music.tip'); })
+    .catch(() => { MUSIC.el.removeAttribute('src'); musicState(false); musicFile.click(); });
+};
+
+for (const o of scene.children) if (o !== bike && o !== runner && o !== lion && o !== ghost && o !== refRider && o !== sun && o !== sun.target && o !== NIGHT.objs)
   o.traverse(c => { c.updateMatrix(); c.updateMatrixWorld(true); c.matrixAutoUpdate = false; c.matrixWorldAutoUpdate = false; });
 view(VIEWS[location.hash.slice(1)] ? location.hash.slice(1) : 'ge', true);
 if (location.search.includes('night')) setNight(true);

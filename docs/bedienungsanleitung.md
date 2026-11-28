@@ -45,6 +45,8 @@ Beim ersten Aufruf richtet sich die Sprache nach dem Browser; ohne passende Spra
 | **Route** | Die Routenlinie auf dem Boden ein- und ausblenden. |
 | **Nacht** | Nachtmodus ein- und ausschalten (siehe Abschnitt 6). |
 | **Radfahrt ▶** | Radfahrt starten (siehe Abschnitt 4). |
+| **Musik ♪** | Hintergrundmusik in Endlosschleife: startet und pausiert „Eye of the Tiger“ (`data/eyeOfTheToger.mp3`, nur lokal vorhanden). Fehlt die Datei, zum Beispiel auf GitHub Pages, wählst du eine eigene Audiodatei; der Browser merkt sie sich. Shift-Klick wählt eine andere Datei. |
+| **Rad 🚴 / Laufen 🏃** | Wechselt zwischen Radfahrer und Läufer. Im Läufermodus laufen auch „Last Round“ und „Pacemaker“ als Läufer, und die Geschwindigkeit folgt einer Laufphysik: dieselbe Leistung ergibt etwa ein Drittel der Radgeschwindigkeit (180 W bei 79 kg ≈ 8 km/h in der Ebene). Im Läufermodus ist überall vom Lauf statt vom Rad die Rede (Knöpfe, Kamera, Anzeige der Schrittfrequenz), das Gewichtsfeld zeigt das Gewicht des Läufers. Die Wahl bleibt gespeichert. |
 | **Kamera: hinter Rad / Drohne** | Kameramodus der Radfahrt wechseln. |
 | **Tempo** (Regler) | Abspielgeschwindigkeit der Radfahrt im Demo-Modus, von 1 bis 10. |
 | **Screenshot 4K** | Bild mit 3840 × 2160 Pixeln speichern. |
