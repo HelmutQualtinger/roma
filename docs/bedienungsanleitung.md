@@ -166,9 +166,9 @@ Ist kein Ergometer verbunden, nach 30 Sekunden ohne Messwerte oder bei abgebroch
 - Sternenhimmel mit Mond
 - beleuchtete Fenster und Schaufenster; einzelne Fenster gehen nach und nach an und aus
 - Straßenlaternen mit Lichtkegeln
-- angestrahltes Kolosseum und Vittoriano
+- angestrahltes Kolosseum, Vittoriano, Pantheon und Trevi-Brunnen
 
-Die Radfahrt funktioniert im Nachtmodus wie am Tag.
+Die Radfahrt funktioniert im Nachtmodus wie am Tag. Ein Scheinwerfer an der Kamera leuchtet dabei den Radfahrer und den Löwen an.
 
 ---
 

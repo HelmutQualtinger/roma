@@ -2695,6 +2695,10 @@ function winStep(dt) {
   NIGHT.head = head; NIGHT.pool = pool;
   // a few real point lights follow the camera's focus and light the nearest lamps' surroundings (bike, facades)
   NIGHT.lights = Array.from({ length: 6 }, () => { const l = new THREE.PointLight(0xffb566, 90, 45, 2); NIGHT.objs.add(l); return l; });
+  // headlight from the ride camera onto the rider and the lion (aimed at the camera's look point). It stays in the scene all
+  // night and is only dimmed to 0 outside the ride: switching a light on/off would recompile every material
+  NIGHT.spot = new THREE.SpotLight(0xfff1dc, 0, 70, 0.34, 0.55, 2);
+  NIGHT.objs.add(NIGHT.spot, NIGHT.spot.target);
   NIGHT.objs.visible = false;
   scene.add(NIGHT.objs);
 }
@@ -2714,6 +2718,9 @@ function setNight(on) {
 const _focus = new THREE.Vector3();
 function nightStep() {                                             // stars follow the camera; point lights hop to the lamps nearest the focus
   NIGHT.dome.position.copy(camera.position); NIGHT.dome.updateMatrixWorld(true);
+  NIGHT.spot.intensity += ((ride.on ? 420 : 0) - NIGHT.spot.intensity) * 0.1;   // fades in and out with the ride
+  NIGHT.spot.position.copy(camera.position); NIGHT.spot.target.position.copy(ride.on ? look : controls.target);
+  NIGHT.spot.updateMatrixWorld(); NIGHT.spot.target.updateMatrixWorld();
   if (NIGHT.frame++ % 10) return;
   _focus.copy(ride.on ? bike.position : controls.target);
   const near = NIGHT.lamps.map((p, i) => [p.distanceToSquared(_focus), i]).sort((a, b) => a[0] - b[0]);
