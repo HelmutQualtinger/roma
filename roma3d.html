@@ -113,7 +113,7 @@ const I18N = {
     weight: 'Gewicht (Fahrer + Rad)', 's.cad': 'Trittfrequenz', 's.res': 'Widerstand', 's.lap': 'Runde', 's.ghost': 'Last Round', 's.dist': 'Strecke', 's.kcal': 'Energie', rpm: 'U/min', lap: 'Runde', 'lap.last': 'letzte Runde',
     'where.col': 'Rund um das Kolosseum', timelapse: 'Zeitraffer',
     'l.Kolosseum': 'Kolosseum', 'l.Konstantinsbogen': 'Konstantinsbogen', 'l.Forum Romanum': 'Forum Romanum', 'l.Palatin': 'Palatin',
-    'l.Tempel der Venus und Roma': 'Tempel der Venus und Roma', 'l.Circus Maximus': 'Circus Maximus', 'l.Kaiserforen': 'Kaiserforen', 'l.Celio': 'Celio',
+    'l.Tempel der Venus und Roma': 'Tempel der Venus und Roma', 'l.Circus Maximus': 'Circus Maximus', 'l.Kaiserforen': 'Kaiserforen', 'l.Celio': 'Celio', 'l.Trevi-Brunnen': 'Trevi-Brunnen', 'l.Pantheon': 'Pantheon',
   },
   en: {
     title: 'Colosseum 3D', place: 'Places …', load: 'Building scene …',
@@ -126,7 +126,7 @@ const I18N = {
     weight: 'Weight (rider + bike)', 's.cad': 'Cadence', 's.res': 'Resistance', 's.lap': 'Lap', 's.ghost': 'Last Round', 's.dist': 'Distance', 's.kcal': 'Energy', rpm: 'rpm', lap: 'Lap', 'lap.last': 'last lap',
     'where.col': 'Around the Colosseum', timelapse: 'Time-lapse',
     'l.Kolosseum': 'Colosseum', 'l.Konstantinsbogen': 'Arch of Constantine', 'l.Forum Romanum': 'Roman Forum', 'l.Palatin': 'Palatine Hill',
-    'l.Tempel der Venus und Roma': 'Temple of Venus and Roma', 'l.Circus Maximus': 'Circus Maximus', 'l.Kaiserforen': 'Imperial Fora', 'l.Celio': 'Caelian Hill',
+    'l.Tempel der Venus und Roma': 'Temple of Venus and Roma', 'l.Circus Maximus': 'Circus Maximus', 'l.Kaiserforen': 'Imperial Fora', 'l.Celio': 'Caelian Hill', 'l.Trevi-Brunnen': 'Trevi Fountain', 'l.Pantheon': 'Pantheon',
   },
   it: {
     title: 'Colosseo 3D', place: 'Luoghi …', load: 'Costruzione della scena …',
@@ -139,7 +139,7 @@ const I18N = {
     weight: 'Peso (ciclista + bici)', 's.cad': 'Cadenza', 's.res': 'Resistenza', 's.lap': 'Giro', 's.ghost': 'Last Round', 's.dist': 'Distanza', 's.kcal': 'Energia', rpm: 'giri/min', lap: 'Giro', 'lap.last': 'ultimo giro',
     'where.col': 'Intorno al Colosseo', timelapse: 'Accelerazione',
     'l.Kolosseum': 'Colosseo', 'l.Konstantinsbogen': 'Arco di Costantino', 'l.Forum Romanum': 'Foro Romano', 'l.Palatin': 'Palatino',
-    'l.Tempel der Venus und Roma': 'Tempio di Venere e Roma', 'l.Circus Maximus': 'Circo Massimo', 'l.Kaiserforen': 'Fori Imperiali', 'l.Celio': 'Celio',
+    'l.Tempel der Venus und Roma': 'Tempio di Venere e Roma', 'l.Circus Maximus': 'Circo Massimo', 'l.Kaiserforen': 'Fori Imperiali', 'l.Celio': 'Celio', 'l.Trevi-Brunnen': 'Fontana di Trevi', 'l.Pantheon': 'Pantheon',
   },
   fr: {
     title: 'Colisée 3D', place: 'Lieux …', load: 'Construction de la scène …',
@@ -152,7 +152,7 @@ const I18N = {
     weight: 'Poids (cycliste + vélo)', 's.cad': 'Cadence', 's.res': 'Résistance', 's.lap': 'Tour', 's.ghost': 'Last Round', 's.dist': 'Distance', 's.kcal': 'Énergie', rpm: 'tr/min', lap: 'Tour', 'lap.last': 'dernier tour',
     'where.col': 'Autour du Colisée', timelapse: 'Accéléré',
     'l.Kolosseum': 'Colisée', 'l.Konstantinsbogen': 'Arc de Constantin', 'l.Forum Romanum': 'Forum romain', 'l.Palatin': 'Mont Palatin',
-    'l.Tempel der Venus und Roma': 'Temple de Vénus et de Rome', 'l.Circus Maximus': 'Cirque Maxime', 'l.Kaiserforen': 'Forums impériaux', 'l.Celio': 'Mont Cælius',
+    'l.Tempel der Venus und Roma': 'Temple de Vénus et de Rome', 'l.Circus Maximus': 'Cirque Maxime', 'l.Kaiserforen': 'Forums impériaux', 'l.Celio': 'Mont Cælius', 'l.Trevi-Brunnen': 'Fontaine de Trevi', 'l.Pantheon': 'Panthéon',
   },
 };
 const LOCALE = { de: 'de-DE', en: 'en-GB', it: 'it-IT', fr: 'fr-FR' };
@@ -441,6 +441,15 @@ function walls(geo, ring, zb, zt, du, dv, voff, k, uo = 0, vo = 0) {
     u += len;
   }
 }
+// footprints for the ride camera's collision test (camBlocked): 40 m grid of [outer ring, bottom, top, bbox]
+const BLD = new Map(), BC = 40;
+const bldAdd = (ring, zb, zt) => {
+  const xs = ring.map(p => p.x), ys = ring.map(p => p.y), e = [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)];
+  for (let cx = Math.floor((e[0] - 2) / BC); cx <= Math.floor((e[2] + 2) / BC); cx++)
+    for (let cy = Math.floor((e[1] - 2) / BC); cy <= Math.floor((e[3] + 2) / BC); cy++) {
+      const k = cx * 4096 + cy; if (!BLD.has(k)) BLD.set(k, []); BLD.get(k).push([ring, zb, zt, e]);
+    }
+};
 let bIdx = 0;
 for (const b of S.buildings) {
   if (b.o.length < 6) continue;
@@ -449,11 +458,12 @@ for (const b of S.buildings) {
   const cx = outer.reduce((s, p) => s + p.x, 0) / outer.length, cy = outer.reduce((s, p) => s + p.y, 0) / outer.length;
   const [vx, vd] = vitLocal(cx, cy);
   if (Math.abs(vx) < 60 && vd > -40 && vd < 100) continue;      // replaced by the detailed Vittoriano model
-  if (b.n === 'Arco di Costantino') continue;                    // replaced by the detailed arch model
+  if (b.n === 'Arco di Costantino' || b.n === 'Pantheon') continue;   // replaced by the detailed models
   const pv = b.n === 'Palazzo Venezia', T = kind => G[kind].at(cx, cy);
   const k = pv ? C('#c9b48e') : parseColor(b.c, '#d9a066').multiplyScalar(0.94 + rnd() * 0.1);
   const hc = gh(cx, cy), hb = Math.min(...outer.map(p => gh(p.x, p.y)));
-  const zt = hc + (pv ? 27 : Math.max(b.z, b.m + 1)), zb = b.m > 0 ? hc + b.m : hb - 2;
+  const zt = hc + (pv ? 27 : b.n === 'Palazzo Poli' ? 24 : Math.max(b.z, b.m + 1)), zb = b.m > 0 ? hc + b.m : hb - 2;
+  bldAdd(outer, zb, pv ? hc + 40 : zt);
   const kind = pv ? 'mono' : b.k === 1 ? 'stone' : b.k === 2 ? 'mono' : 'win';
   if (pv) {                                                      // Guelph merlons + corner tower on Piazza Venezia
     merlons(T('mono'), outer, zt, k);
@@ -919,6 +929,261 @@ scene.add(vit);
   scene.add(g);
 }
 
+// ---------- Pantheon and Fontana di Trevi (procedural; frames from the OSM footprints, own random stream) ----------
+// shared: travertine with a night floodlight (LM.stone), animated water (LM.water, LM.fall; waterStep() scrolls them),
+// keep-out zones for the street lamps (inLandmark)
+const lrng = (a => () => { a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; })(20251128);
+const lspeck = (g, w, h, n, a) => { for (let i = 0; i < n; i++) { g.fillStyle = lrng() < 0.5 ? `rgba(0,0,0,${a * lrng()})` : `rgba(255,255,255,${a * lrng()})`; g.fillRect(lrng() * w, lrng() * h, 1 + lrng() * 3, 1 + lrng() * 3); } };
+const LCj = (s, j) => { const c = new THREE.Color(s); return j ? c.multiplyScalar(1 - j / 2 + lrng() * j) : c; };
+const waterTex = tex(256, 256, (g, w, h) => {
+  g.fillStyle = '#3aaebf'; g.fillRect(0, 0, w, h);
+  for (let i = 0; i < 70; i++) {                                  // caustic lines
+    g.strokeStyle = `rgba(220,255,255,${0.08 + lrng() * 0.18})`; g.lineWidth = 1 + lrng() * 2.5; g.beginPath();
+    let x = lrng() * w, y = lrng() * h; g.moveTo(x, y);
+    for (let q = 0; q < 4; q++) g.quadraticCurveTo(x + (lrng() - .5) * 60, y + (lrng() - .5) * 60, x += (lrng() - .5) * 70, y += (lrng() - .5) * 70);
+    g.stroke();
+  }
+});
+const fallTex = tex(64, 256, (g, w, h) => {
+  g.clearRect(0, 0, w, h);
+  for (let i = 0; i < 90; i++) { g.fillStyle = `rgba(255,255,255,${0.25 + lrng() * 0.6})`; g.fillRect(lrng() * w, lrng() * h, 1 + lrng() * 3, 20 + lrng() * 90); }
+});
+fallTex.colorSpace = THREE.NoColorSpace;
+const LM = {
+  stone: mat(marbleTex, { roughness: 0.6, emissive: 0xfff0dc, emissiveMap: marbleTex, emissiveIntensity: 0 }),
+  brick: lam(tex(256, 256, (g, w, h) => {                         // Roman brick with lime mortar, weathered
+    g.fillStyle = '#cbbba2'; g.fillRect(0, 0, w, h);
+    for (let y = 0; y < h; y += 8) for (let x = -((y / 8) % 2) * 20; x < w; x += 40) {
+      const v = lrng(); g.fillStyle = `rgb(${150 + v * 40 | 0},${112 + v * 30 | 0},${84 + v * 22 | 0})`; g.fillRect(x + 1, y + 1, 38, 6);
+    }
+    lspeck(g, w, h, 5000, 0.12);
+  })),
+  granite: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.4, side: THREE.DoubleSide }),
+  lead: new THREE.MeshStandardMaterial({ color: 0x8a8e92, vertexColors: true, metalness: 0.35, roughness: 0.55, side: THREE.DoubleSide }),
+  water: new THREE.MeshStandardMaterial({ map: waterTex, roughness: 0.12, metalness: 0.1, transparent: true, opacity: 0.9, emissive: 0x1aa6c4, emissiveIntensity: 0 }),
+  fall: new THREE.MeshBasicMaterial({ map: fallTex, transparent: true, opacity: 0.85, depthWrite: false, side: THREE.DoubleSide }),
+};
+waterTex.repeat.set(0.12, 0.12);
+LM.brick.emissive = new THREE.Color(0xffc890); LM.brick.emissiveMap = LM.brick.map; LM.brick.emissiveIntensity = 0;   // floodlit at night
+function waterStep(dt) { waterTex.offset.x += dt * 0.004; waterTex.offset.y += dt * 0.006; fallTex.offset.y += dt * 1.4; }
+const KEEP_OUT = [], inLandmark = (x, y) => KEEP_OUT.some(f => f(x, y));
+// local frame like the Vittoriano: x along the facade, z towards the back, the front faces -z
+const lframe = (O, rot) => (x, y) => { const dx = x - O.x, dy = y - O.y, c = Math.cos(rot), s = Math.sin(rot); return [dx * c + dy * s, dx * s - dy * c]; };
+function lathe(g, cx, cz, prof, k, seg = 64, du = 3, a0 = 0, a1 = 2 * Math.PI, zs = 1) {   // surface of revolution about the vertical axis at (cx, cz), z scaled by zs
+  for (let i = 0; i < seg; i++) {
+    const b0 = a0 + (a1 - a0) * i / seg, b1 = a0 + (a1 - a0) * (i + 1) / seg;
+    for (let j = 0; j < prof.length - 1; j++) {
+      const [r0, y0] = prof[j], [r1, y1] = prof[j + 1], P = (r, y, b) => [cx + r * Math.cos(b), y, cz + r * Math.sin(b) * zs], R = Math.max(r0, r1, 1);
+      g.quad(P(r0, y0, b0), P(r0, y0, b1), P(r1, y1, b1), P(r1, y1, b0), [b0 * R / du, y0 / du], [b1 * R / du, y0 / du], [b1 * R / du, y1 / du], [b0 * R / du, y1 / du], k);
+    }
+  }
+}
+function slab(g, ax, ay, bx, by, t, z0, z1, k) {                  // beam along a line in the x-y plane, thickness t below it, extruded over z0..z1
+  const L = Math.hypot(bx - ax, by - ay), nx = (by - ay) / L * t, ny = -(bx - ax) / L * t;
+  const q = [[ax, ay], [bx, by], [bx + nx, by + ny], [ax + nx, ay + ny]];
+  for (let i = 0; i < 4; i++) { const [px, py] = q[i], [rx, ry] = q[(i + 1) % 4]; g.quad([px, py, z0], [rx, ry, z0], [rx, ry, z1], [px, py, z1], Z, Z, Z, Z, k); }
+  for (const z of [z0, z1]) g.quad([...q[0], z], [...q[1], z], [...q[2], z], [...q[3], z], Z, Z, Z, Z, k);
+}
+function inscription(lines, w, h, base, ink) {
+  return tex(w, h, (c, W2, H2) => {
+    c.fillStyle = base; c.fillRect(0, 0, W2, H2); lspeck(c, W2, H2, 3000, 0.08);
+    c.textAlign = 'center'; c.textBaseline = 'middle';
+    lines.forEach(([t, size], i) => {
+      c.font = `bold ${size}px "Times New Roman", Times, serif`; const y = H2 * (i + 0.5) / lines.length;
+      c.fillStyle = 'rgba(255,255,255,.4)'; c.fillText(t, W2 / 2 + 2, y + 2, W2 - 30); c.fillStyle = ink; c.fillText(t, W2 / 2, y, W2 - 30);
+    });
+  });
+}
+const plaque = (grp, map, x, y, z, w, h) => {                     // inscription slab facing -z
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshLambertMaterial({ map, side: THREE.DoubleSide }));
+  m.position.set(x, y, z); m.rotation.y = Math.PI; m.receiveShadow = true; grp.add(m);
+};
+const TRAV = C('#e6dcc6'), TRAV2 = C('#d4c8ae'), STAT_W = C('#f3eee4'), DARKW = C('#2b251e');
+
+// Pantheon. Frame: rotunda centre fitted to the OSM footprint (outer radius 29.2 m), axis from the portico front
+// (36.6 m wide, 49.5 m in front of the centre). Rotunda, intermediate block, portico of 16 granite columns (8 grey in front,
+// 2 × 4 pink behind), entablature with Agrippa's inscription, pediment, stepped rings, lead dome with an open oculus,
+// the later brick block at the back, and the Fontana del Pantheon with the Macuteo obelisk on Piazza della Rotonda.
+{
+  const PAN = { x: -1289.25, y: 908.9, rot: Math.atan2(2.3, 36.5) }, toL = lframe(PAN, PAN.rot);
+  const fx = PAN.x - 49.5 * Math.sin(PAN.rot), fy = PAN.y + 49.5 * Math.cos(PAN.rot), y0 = gh(fx, fy);
+  const g = new THREE.Group(); g.position.set(PAN.x, y0, -PAN.y); g.rotation.y = PAN.rot;
+  const PS = new Geo(), PB = new Geo(), PG = new Geo(), PL = new Geo(), PD = new Geo(), WHITE = C('#ffffff');
+  // rotunda: three brick zones with travertine cornices, stepped rings, dome, oculus
+  lathe(PB, 0, 0, [[29, -4], [29, 12]], WHITE);
+  lathe(PS, 0, 0, [[29, 12], [29.7, 12.3], [29.7, 12.9], [29, 12.9]], TRAV2);
+  lathe(PB, 0, 0, [[29, 12.9], [29, 23.9]], WHITE);
+  lathe(PS, 0, 0, [[29, 23.9], [29.8, 24.2], [29.8, 24.8], [28.8, 24.8]], TRAV2);
+  lathe(PB, 0, 0, [[28.8, 24.8], [28.8, 30.2]], WHITE);
+  lathe(PS, 0, 0, [[28.8, 30.2], [29.3, 30.4], [29.3, 30.8], [28.4, 30.8]], TRAV2);
+  const rings = [[28.4, 30.8]];
+  for (let i = 0; i < 6; i++) { const r = 28.4 - i * 0.85, y = 30.8 + i * 0.75; rings.push([r, y + 0.75], [r - 0.85, y + 0.75]); }
+  lathe(PS, 0, 0, rings, C('#d9d2c2'));
+  const rd = 28.4 - 6 * 0.85, yd = 30.8 + 6 * 0.75, pm = Math.acos(4.6 / rd), dome = [];
+  for (let i = 0; i <= 14; i++) { const p = pm * i / 14; dome.push([rd * Math.cos(p), yd + 8 * Math.sin(p) / Math.sin(pm)]); }
+  lathe(PL, 0, 0, dome, WHITE);
+  lathe(PS, 0, 0, [[4.6, yd + 8], [4.75, yd + 8.25], [4.4, yd + 8.25], [4.4, yd + 4]], TRAV2, 32);
+  lathe(PD, 0, 0, [[4.4, yd + 4], [0, yd + 4]], DARKW, 32);        // darkness of the interior under the oculus
+  // later brick block at the back (from the footprint: x −24.6…24.2, z 15.5…32.8)
+  box(PB, -24.6, 24.2, -3, 13, 15.5, 32.8, WHITE, 3);
+  box(PS, -24.9, 24.5, 13, 13.6, 15.2, 33.1, TRAV2);
+  // intermediate block between portico and rotunda, with the cornices of the rotunda carried across
+  box(PB, -18, 18, -3, 30.2, -35, -22, WHITE, 3);
+  for (const [a, b] of [[12, 12.9], [23.9, 24.8], [30.2, 30.8]]) box(PS, -18.4, 18.4, a, b, -35.4, -22, TRAV2);
+  // portico
+  box(PS, -18.3, 18.3, -2, 1.3, -48, -35, TRAV2);
+  steps(PS, -17.5, 17.5, -49.5, -48, 0, 1.3, TRAV, 0.33);
+  const CXS = [-15.6, -11.15, -6.69, -2.23, 2.23, 6.69, 11.15, 15.6];
+  const cols = [...CXS.map(x => [x, -46.6, C('#8f8b86')]), ...[-15.6, -6.69, 6.69, 15.6].flatMap(x => [[x, -42, C('#b8907f')], [x, -37.6, C('#b8907f')]])];
+  for (const [x, z, k] of cols) {
+    cyl(PS, x, z, 1.3, 1.9, 1.05, 0.95, TRAV, 20);
+    cyl(PG, x, z, 1.9, 13.7, 0.78, 0.67, k, 20);
+    cyl(PS, x, z, 13.7, 15, 0.7, 1.0, TRAV, 16);
+    boxC(PS, x, z, 2.2, 2.2, 15, 15.4, TRAV2);
+  }
+  box(PS, -16.8, 16.8, 15.4, 16.7, -47.5, -35, TRAV);           // architrave
+  box(PS, -16.6, 16.6, 16.7, 17.8, -47.3, -35, TRAV2);          // frieze
+  box(PS, -17.3, 17.3, 17.8, 18.5, -48, -35, TRAV);             // cornice
+  PS.quad([-16.8, 15.4, -47.5], [16.8, 15.4, -47.5], [16.8, 15.4, -35], [-16.8, 15.4, -35], Z, Z, Z, Z, C('#a89e8a'));   // portico ceiling
+  plaque(g, inscription([['M·AGRIPPA·L·F·COS·TERTIVM·FECIT', 74]], 2048, 96, '#d2c7ae', '#3b3127'), 0, 17.25, -47.33, 30, 0.95);
+  const AP = 25.6;                                                // pediment apex
+  PS.tri([-16.8, 18.5, -47.2], [16.8, 18.5, -47.2], [0, AP - 0.6, -47.2], Z, Z, Z, C('#c9bea7'));
+  for (const s of [-1, 1]) {
+    slab(PS, s * 17.6, 18.2, 0, AP, 0.75, -48, -47, TRAV);       // raking cornices
+    slab(PS, s * 17.3, 18.6, 0, AP + 0.05, 0.4, -47, -35, C('#8e8a82'));   // roof
+  }
+  // bronze door in its marble frame, niches for the statues of Augustus and Agrippa
+  box(PS, -4.4, 4.4, 1.3, 11, -35.15, -35, TRAV2);
+  box(PD, -3.1, 3.1, 1.3, 9.2, -35.3, -35.15, C('#5b4a32'));
+  for (const s of [-1, 1]) box(PD, s * 10.9 - 2, s * 10.9 + 2, 3, 11, -35.1, -35, C('#6f6656'));
+  // Piazza della Rotonda: Fontana del Pantheon with the Macuteo obelisk (OSM: −1297.2 / 993.0, 14.5 m)
+  const [ox, oz] = toL(-1297.2, 993.0), oy = gh(-1297.2, 993.0) - y0;
+  lathe(PS, ox, oz, [[4.3, oy - 0.3], [4.3, oy + 0.75], [3.9, oy + 0.75], [3.9, oy + 0.4]], TRAV, 40);
+  const pool = new THREE.Mesh(new THREE.CircleGeometry(3.9, 40).rotateX(-Math.PI / 2), LM.water);
+  pool.position.set(ox, oy + 0.5, oz); g.add(pool);
+  cyl(PS, ox, oz, oy + 0.4, oy + 2.4, 1.6, 1.1, C('#cfc4ad'), 12);   // rocky base with the dolphins
+  for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2 + Math.PI / 4; ell(PS, ox + Math.cos(a) * 1.3, oy + 2.3, oz + Math.sin(a) * 1.3, 0.35, 0.55, 0.35, STAT_W, 8); }
+  boxC(PS, ox, oz, 1.9, 1.9, oy + 2.4, oy + 4.6, TRAV);
+  boxC(PS, ox, oz, 2.2, 2.2, oy + 4.6, oy + 5.0, TRAV2);
+  cyl(PS, ox, oz, oy + 5.0, oy + 12.4, 0.62, 0.42, C('#c7b392'), 4);   // obelisk (red granite in the light)
+  cyl(PS, ox, oz, oy + 12.4, oy + 13.1, 0.42, 0.02, C('#c7b392'), 4);
+  boxC(PG, ox, oz, 0.12, 0.12, oy + 13.1, oy + 14.5, C('#6f5d3a')); boxC(PG, ox, oz, 0.6, 0.12, oy + 13.9, oy + 14.02, C('#6f5d3a'));
+  g.add(PS.mesh(LM.stone), PB.mesh(LM.brick), PG.mesh(LM.granite), PL.mesh(LM.lead), PD.mesh(MAT.flat));
+  scene.add(g);
+  KEEP_OUT.push((x, y) => { const [lx, lz] = toL(x, y); return Math.hypot(lx, lz) < 32 || (Math.abs(lx) < 20 && lz > -52 && lz < 0) || (Math.abs(lx) < 26 && lz > 12 && lz < 36) || Math.hypot(lx - ox, lz - oz) < 6.5; });
+}
+
+// Fontana di Trevi on the south front of Palazzo Poli. Frame: the OSM facade line (49.7 m), x along it, z into the palace.
+// Centre: triumphal arch with four Corinthian columns, the exedra with Oceanus on his shell chariot, two sea-horses
+// with tritons, Abundance and Salubrity in the side niches; wings with giant pilasters and two rows of windows; attic with
+// Clement XII's inscription, four statues and the papal arms; the travertine reef across the whole width with cascades
+// into the basin.
+{
+  const TRV = { x: -757.65, y: 1186.35, rot: Math.atan2(-16.5, -46.9) }, W2 = 24.8;
+  const y0 = gh(TRV.x + 0.3319 * 8, TRV.y - 0.9433 * 8);          // piazza level 8 m in front of the facade
+  const g = new THREE.Group(); g.position.set(TRV.x, y0, -TRV.y); g.rotation.y = TRV.rot;
+  const TS = new Geo(), TD = new Geo(), NICHE = C('#bdb099');
+  // wall: everything except the exedra (x ±3.9, y 3…17.6, 1.6 m deep)
+  box(TS, -W2, -3.9, -2, 19.3, -0.5, 3, TRAV); box(TS, 3.9, W2, -2, 19.3, -0.5, 3, TRAV);
+  box(TS, -3.9, 3.9, 17.6, 19.3, -0.5, 3, TRAV); box(TS, -3.9, 3.9, -2, 3, -2.2, 3, TRAV); box(TS, -3.9, 3.9, 3, 17.6, -0.55, 3, TRAV);
+  for (const s of [-1, 1]) box(TS, s < 0 ? -10.4 : 3.9, s < 0 ? -3.9 : 10.4, -2, 19.3, -2.2, -0.5, TRAV);   // piers of the arch
+  // exedra: half cylinder and half dome, archivolt, spandrels up to the entablature
+  lathe(TS, 0, -2.2, [[3.9, 3], [3.9, 13.7]], NICHE, 20, 3, 0, Math.PI, 0.4);   // 1.6 m deep: stays in front of the palace wall
+  const hd = []; for (let i = 0; i <= 8; i++) { const p = i / 8 * Math.PI / 2; hd.push([3.9 * Math.cos(p), 13.7 + 3.9 * Math.sin(p)]); }
+  lathe(TS, 0, -2.2, hd, C('#c8bca5'), 20, 3, 0, Math.PI, 0.4);
+  for (let i = 0; i < 20; i++) {
+    const a0 = i / 20 * Math.PI, a1 = (i + 1) / 20 * Math.PI, A = (r, a) => [r * Math.cos(a), 13.7 + r * Math.sin(a)];
+    const [p0, q0] = A(3.9, a0), [p1, q1] = A(3.9, a1), [r0, t0] = A(4.6, a0), [r1, t1] = A(4.6, a1);
+    TS.quad([p0, q0, -2.3], [p1, q1, -2.3], [r1, t1, -2.3], [r0, t0, -2.3], Z, Z, Z, Z, TRAV2);
+    TS.quad([p0, q0, -2.2], [p1, q1, -2.2], [p1, 19.3, -2.2], [p0, 19.3, -2.2], Z, Z, Z, Z, TRAV);
+  }
+  // giant order of the centre: four columns on pedestals
+  for (const x of [-9.4, -4.75, 4.75, 9.4]) {
+    boxC(TS, x, -3.1, 2.1, 1.9, -0.5, 6, TRAV2);
+    cyl(TS, x, -3.2, 6, 6.5, 0.95, 0.85, TRAV, 20);
+    cyl(TS, x, -3.2, 6.5, 17.8, 0.72, 0.62, TRAV, 20);
+    cyl(TS, x, -3.2, 17.8, 18.7, 0.65, 0.95, TRAV2, 16);
+    boxC(TS, x, -3.2, 2.1, 2.1, 18.7, 19.3, TRAV);
+    boxC(TS, x, -4.1, 1.5, 1.4, 21.6, 22.4, TRAV2);                // statue on the entablature
+    figure(TS, x, 22.4, -4.1, 3.0, STAT_W);
+  }
+  for (const s of [-1, 1]) {
+    const x = s * 7.08;                                           // side niches: Abundance (left), Salubrity (right), reliefs above
+    box(TD, x - 1.15, x + 1.15, 6.6, 11.8, -2.27, -2.2, NICHE);
+    boxC(TS, x, -2.7, 1.7, 1.0, 6, 6.6, TRAV2); figure(TS, x, 6.6, -2.7, 3.7, STAT_W);
+    box(TS, x - 1.45, x + 1.45, 12.8, 16.4, -2.35, -2.2, TRAV2);
+    for (let i = 0; i < 4; i++) ell(TS, x - 0.95 + i * 0.63, 14.5, -2.38, 0.24, 1.1, 0.12, STAT_W, 8);
+  }
+  box(TS, -10.9, 10.9, 19.3, 21.6, -4.6, -0.5, TRAV);              // entablature of the centre
+  box(TS, -11.2, 11.2, 21, 21.6, -4.9, -0.5, TRAV2);
+  // attic with the inscription, cornice, papal arms with two Fames
+  box(TS, -10.4, 10.4, 21.6, 24.4, -3, -0.5, TRAV); box(TS, -10.8, 10.8, 24.4, 25, -3.4, -0.5, TRAV2);
+  plaque(g, inscription([['CLEMENS · XII · PONT · MAX', 66], ['AQVAM · VIRGINEM · COPIA · ET · SALVBRITATE · COMMENDATAM', 34],
+    ['CVLTV · MAGNIFICO · ORNAVIT', 40], ['ANNO · DOMINI · MDCCXXXV · PONTIF · VI', 36]], 1024, 340, '#ddd2bb', '#3a3127'), 0, 23, -3.03, 8.6, 2.5);
+  ell(TS, 0, 26.6, -2.6, 1.3, 1.6, 0.4, TRAV2, 12); cyl(TS, 0, -2.6, 28.1, 28.9, 0.45, 0.25, TRAV2, 10);
+  for (const s of [-1, 1]) { ell(TS, s * 2.2, 25.5, -2.6, 1.1, 0.45, 0.5, STAT_W, 8); ell(TS, s * 1.5, 26.1, -2.6, 0.4, 0.55, 0.35, STAT_W, 8); ell(TS, s * 1.3, 26.85, -2.6, 0.22, 0.25, 0.22, STAT_W, 8); }
+  // wings: rusticated ground floor, giant pilasters, balconied windows, attic with balustrade
+  for (const s of [-1, 1]) {
+    const xl = s < 0 ? -W2 : 10.4, xr = s < 0 ? -10.4 : W2;
+    for (const y of [1.6, 3.2, 4.8, 6.4]) box(TS, xl, xr, y, y + 0.12, -0.62, -0.5, TRAV2);
+    box(TS, xl, xr, 7.6, 8.1, -0.8, -0.5, TRAV2);
+    for (const x of [11, 15.6, 20.2, 24.3]) { boxC(TS, s * x, -0.65, 1.3, 0.3, 8.1, 18, TRAV); boxC(TS, s * x, -0.75, 1.6, 0.5, 18, 19.3, TRAV2); }
+    for (const x of [13.3, 17.9, 22.25]) {
+      const cx = s * x;
+      box(TS, cx - 1.35, cx + 1.35, 8.7, 12.6, -0.6, -0.5, TRAV2); box(TD, cx - 1, cx + 1, 9, 12.2, -0.64, -0.6, DARKW);
+      box(TS, cx - 1.6, cx + 1.6, 12.6, 13, -0.8, -0.5, TRAV); TS.tri([cx - 1.6, 13, -0.8], [cx + 1.6, 13, -0.8], [cx, 13.8, -0.8], Z, Z, Z, TRAV);
+      box(TS, cx - 1.5, cx + 1.5, 8.1, 8.9, -1.2, -0.5, TRAV);        // balcony
+      box(TS, cx - 1.2, cx + 1.2, 14.2, 17, -0.6, -0.5, TRAV2); box(TD, cx - 0.9, cx + 0.9, 14.5, 16.7, -0.64, -0.6, DARKW);
+      box(TS, cx - 1.35, cx + 1.35, 17, 17.3, -0.75, -0.5, TRAV);
+    }
+    box(TS, xl - (s < 0 ? 0.3 : 0), xr + (s > 0 ? 0.3 : 0), 19.3, 21.5, -1.2, -0.5, TRAV);
+    box(TS, xl - (s < 0 ? 0.5 : 0), xr + (s > 0 ? 0.5 : 0), 21, 21.5, -1.5, -0.5, TRAV2);
+    box(TS, xl, xr, 21.5, 23.6, -0.9, -0.5, TRAV); box(TS, xl, xr, 23.6, 23.8, -1, -0.5, TRAV2);
+    for (let x = xl + 0.35; x < xr - 0.2; x += 0.55) cyl(TS, x, -0.75, 23.8, 24.6, 0.13, 0.1, TRAV, 6);
+    box(TS, xl, xr, 24.6, 24.85, -1, -0.5, TRAV2);
+  }
+  // the reef: travertine rocks across the whole front, highest under Oceanus
+  const reefH = x => 1.4 + 3.4 * Math.exp(-((x / 8.5) ** 2));
+  for (let x = -W2 + 1; x <= W2 - 1; x += 2.2) ell(TS, x, 0.2, -1.8, 2.3, reefH(x) * 0.75, 1.9, LCj('#cdbfa3', 0.15), 10);
+  for (let i = 0; i < 110; i++) {
+    const x = (lrng() * 2 - 1) * (W2 - 1.5), h = reefH(x), d = 1.5 + lrng() * (Math.abs(x) < 9 ? 6 : 3.2);
+    ell(TS, x, lrng() * h * 0.7, -d, 0.8 + lrng() * 1.6, 0.5 + lrng() * h * 0.4, 0.7 + lrng() * 1.3, LCj(lrng() < 0.3 ? '#b7ab90' : '#d6c9ae', 0.18), 8);
+  }
+  // Oceanus on the shell chariot, sea-horses (one calm, one restive) led by tritons
+  ell(TS, 0, 4.5, -2.8, 2.0, 0.6, 1.5, TRAV2, 14);
+  figure(TS, 0, 4.9, -2.6, 5.8, STAT_W);
+  horse(TS, -3.4, 0.6, -6.6, 0.45, STAT_W); horse(TS, 3.4, 0.9, -6.4, 0.45, STAT_W);
+  figure(TS, -5.6, 0.4, -7.8, 2.8, STAT_W); figure(TS, 5.6, 0.4, -7.6, 2.8, STAT_W);
+  // basin: front curve from 10 m (ends) to 18 m (centre) out, rim 0.7 m thick, 0.8 m high
+  const edge = [];
+  for (let i = 0; i <= 40; i++) { const x = W2 - i / 40 * 2 * W2; edge.push([x, -(10 + 8 * Math.cos(Math.PI * x / (2 * W2)) ** 2)]); }
+  const rim = [[W2, -0.5], ...edge, [-W2, -0.5]];
+  for (let i = 0; i < rim.length - 1; i++) {
+    const [ax, az] = rim[i], [bx, bz] = rim[i + 1], L = Math.hypot(bx - ax, bz - az), nx = (bz - az) / L * 0.35, nz = -(bx - ax) / L * 0.35;
+    const O = (x, z, s, y) => [x + nx * s, y, z + nz * s];
+    TS.quad(O(ax, az, 1, -0.3), O(bx, bz, 1, -0.3), O(bx, bz, 1, 0.8), O(ax, az, 1, 0.8), Z, Z, Z, Z, TRAV2);
+    TS.quad(O(ax, az, -1, -0.3), O(bx, bz, -1, -0.3), O(bx, bz, -1, 0.8), O(ax, az, -1, 0.8), Z, Z, Z, Z, TRAV2);
+    TS.quad(O(ax, az, 1, 0.8), O(bx, bz, 1, 0.8), O(bx, bz, -1, 0.8), O(ax, az, -1, 0.8), Z, Z, Z, Z, TRAV);
+  }
+  const shape = new THREE.Shape(rim.map(([x, z]) => new THREE.Vector2(x, -z)));
+  const water = new THREE.Mesh(new THREE.ShapeGeometry(shape, 24).rotateX(-Math.PI / 2), LM.water);
+  water.position.y = 0.55; water.receiveShadow = true; g.add(water);
+  // cascades: [x, top y, top z, bottom y, bottom z, width]
+  const fallPos = [], fallUv = [];
+  for (const [x, ya, za, yb, zb, w] of [[0, 4.4, -4.2, 2.6, -5.6, 3.2], [0, 2.6, -5.9, 0.55, -8.2, 4.4], [-7.1, 3.4, -3, 0.55, -5.9, 1.6], [7.1, 3.4, -3, 0.55, -5.9, 1.6],
+    [-14, 2.2, -2.6, 0.55, -4.8, 1.2], [14, 2.2, -2.6, 0.55, -4.8, 1.2], [-20, 1.9, -2.4, 0.55, -4.4, 1.1], [20, 1.9, -2.4, 0.55, -4.4, 1.1]]) {
+    const v = Math.hypot(ya - yb, za - zb) / 3;
+    fallPos.push(x - w / 2, ya, za, x + w / 2, ya, za, x + w / 2, yb, zb, x - w / 2, ya, za, x + w / 2, yb, zb, x - w / 2, yb, zb);
+    fallUv.push(0, v, w / 2, v, w / 2, 0, 0, v, w / 2, 0, 0, 0);
+  }
+  const fg = new THREE.BufferGeometry(); fg.setAttribute('position', new THREE.Float32BufferAttribute(fallPos, 3)); fg.setAttribute('uv', new THREE.Float32BufferAttribute(fallUv, 2));
+  const falls = new THREE.Mesh(fg, LM.fall); falls.renderOrder = 3; g.add(falls);
+  g.add(TS.mesh(LM.stone), TD.mesh(MAT.flat));
+  scene.add(g);
+  const toL = lframe(TRV, TRV.rot);
+  KEEP_OUT.push((x, y) => { const [lx, lz] = toL(x, y); return Math.abs(lx) < 27 && lz > -21 && lz < 2; });
+}
+
 // ---------- bike ride: Piazza Venezia -> Circo Massimo -> around the Colosseum -> Via dei Fori Imperiali -> back ----------
 // S.route: road-graph shortest path from data/route.py (asphalt preferred, paving only where no road exists)
 const route = (() => {
@@ -938,13 +1203,32 @@ const ROUTE_LEN = route.getLength();
 // route drawn on the ground in neon yellow: a crisp core line plus a soft, wider glow
 const RIDE_Y = 0.45;   // tyres sit on the neon route ribbon (0.42 above the terrain, drawn with polygonOffset), not in it
 const routeLine = new THREE.Group();
+// The road ribbons take their height at their left and right edges, so across a hollow (or a cross slope on the 8 m terrain grid)
+// the asphalt at the centre lies above gh(centre) and swallowed the line. ROUTE_EX lifts the line (and the riders on it)
+// to the road surface there: mean of the terrain at ±ROAD_HW across the route, minus the terrain at the centre, if positive.
+const ROUTE_PTS = route.getSpacedPoints(Math.ceil(ROUTE_LEN / 2)), ROAD_HW = 4;
+const ROUTE_EX = ROUTE_PTS.map((p, i) => {
+  const a = ROUTE_PTS[Math.max(0, i - 1)], b = ROUTE_PTS[Math.min(ROUTE_PTS.length - 1, i + 1)], dx = b.x - a.x, dz = b.z - a.z, L = Math.hypot(dx, dz) || 1;
+  // the road quads are planar between corners up to 6 m apart along the road, so in a dip the asphalt lies above the terrain
+  // along the road too: take the highest mean over plausible quad corners (across ±hw, along ±al)
+  const g = (u, w) => gh(p.x + (dx * u - dz * w) / L, -(p.z + (dz * u + dx * w) / L)), g0 = gh(p.x, -p.z);
+  let ex = 0;
+  for (const hw of [0, 1.5, 2.5, ROAD_HW]) for (const al of [0, 1.5, 3]) {
+    if (hw || al) ex = Math.max(ex, (g(al, hw) + g(al, -hw) + g(-al, hw) + g(-al, -hw)) / 4 - g0);
+  }
+  return ex > 0 ? ex + 0.05 : 0;
+});
+const routeEx = s => {                                           // lift of the line at route distance s (wraps with the laps)
+  const n = ROUTE_PTS.length - 1, f = (((s / ROUTE_LEN) % 1 + 1) % 1) * n, i = Math.min(n - 1, Math.floor(f));
+  return ROUTE_EX[i] + (ROUTE_EX[i + 1] - ROUTE_EX[i]) * (f - i);
+};
 {
-  const pts = route.getSpacedPoints(Math.ceil(ROUTE_LEN / 2));
+  const pts = ROUTE_PTS;
   const ribbon = (w, lift) => {                                  // one continuous strip with mitred joints (no overlaps or gaps)
     const pos = [], idx = [];
     pts.forEach((p, i) => {
       const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)], dx = b.x - a.x, dz = b.z - a.z, L = Math.hypot(dx, dz) || 1;
-      const nx = -dz / L * w / 2, nz = dx / L * w / 2, y = gh(p.x, -p.z) + lift;
+      const nx = -dz / L * w / 2, nz = dx / L * w / 2, y = gh(p.x, -p.z) + lift + ROUTE_EX[i];
       pos.push(p.x + nx, y, p.z + nz, p.x - nx, y, p.z - nz);
       if (i) idx.push(2 * i - 2, 2 * i - 1, 2 * i, 2 * i - 1, 2 * i + 1, 2 * i);
     });
@@ -1465,7 +1749,7 @@ function lionStep(sim) {
   const turn = sim > 0 ? wrapA(LION.heading - h0) / sim : 0;
   LION.roll += (THREE.MathUtils.clamp(-v * turn / 9.81 * 0.6, -0.25, 0.25) - LION.roll) * Math.min(1, sim * 4);
   const side = 0.75 + 0.2 * Math.sin(LION.t * 0.21), ch = Math.cos(LION.heading), sh = Math.sin(LION.heading);
-  p.x += ch * side; p.z -= sh * side; p.y = gh(p.x, -p.z) + RIDE_Y - 0.02;
+  p.x += ch * side; p.z -= sh * side; p.y = gh(p.x, -p.z) + RIDE_Y - 0.02 + routeEx(d);
   LION.pitch = -Math.atan((gh(b.x, -b.z) - gh(a.x, -a.z)) / 3);
   lion.position.copy(p); lion.rotation.set(LION.pitch, LION.heading, LION.roll, 'YXZ');
   const furNear = camera.position.distanceTo(p) < 30; for (const m of LION_SHELLS) m.visible = furNear;
@@ -1504,7 +1788,7 @@ function lionStep(sim) {
   });
 }
 
-const ride = { on: false, s: 0, v: 2, phi: 0, lean: 0, pitch: 0, heading: null, cam: location.search.includes('drone') ? 'drone' : 'chase', dr: +location.search.includes('drone'), orbit: 0, camYaw: 0, camD: 9.5, camH: 3.2, sweepT: 0 };
+const ride = { on: false, s: 0, v: 2, phi: 0, lean: 0, pitch: 0, heading: null, cam: location.search.includes('drone') ? 'drone' : 'chase', dr: +location.search.includes('drone'), orbit: 0, camYaw: 0, camD: 9.5, camF: null, camH: 3.2, sweepT: 0 };
 const hud = document.getElementById('hud');
 // elevation profile along the route (2 m samples) and gradient smoothed over ±10 m
 const PROF_STEP = 2, PROF = [];
@@ -1530,13 +1814,39 @@ function placeBike(dt) {
   const qa = route.getPointAt(Math.max(0, u - 6 / L)), qb = route.getPointAt(Math.min(1, u + 6 / L));
   const turn = Math.atan2(Math.sin(Math.atan2(qb.x - p.x, qb.z - p.z) - Math.atan2(p.x - qa.x, p.z - qa.z)), Math.cos(Math.atan2(qb.x - p.x, qb.z - p.z) - Math.atan2(p.x - qa.x, p.z - qa.z)));
   ride.lean += (THREE.MathUtils.clamp(-Math.atan(ride.v ** 2 * (turn / 6) / 9.81), -0.3, 0.3) - ride.lean) * Math.min(1, dt * 3);   // tan(lean) = v² κ / g
-  p.y = gh(p.x, -p.z) + RIDE_Y;
+  p.y = gh(p.x, -p.z) + RIDE_Y + routeEx(ride.s);
   ride.pitch += (-Math.atan(profAt(GRADE, ride.s)) - ride.pitch) * Math.min(1, dt * 4);
   bike.position.copy(p);
   bike.rotation.set(ride.pitch, ride.heading, 0, 'YXZ'); lean.rotation.z = ride.lean;
   return { p, t: new THREE.Vector3(Math.sin(ride.heading), 0, Math.cos(ride.heading)) };
 }
 const look = new THREE.Vector3();
+// ride camera collision: is the point (x, y data coords, render height h) inside a building, closer than CAM_PAD to a facade,
+// inside the Colosseum or the Vittoriano? camClear() walks from the orbit centre outwards and stops before the first hit,
+// so the camera neither enters a facade nor looks at the rider through one.
+const CAM_PAD = 1.2;
+function camBlocked(x, y, h) {
+  if (inCol(x, y) && h < 50) return true;
+  const [vx, vd] = vitLocal(x, y);
+  if (Math.abs(vx) < 58 && vd > -10 && vd < 100 && h - gh(x, y) < 70) return true;
+  for (const [ring, zb, zt, e] of BLD.get(Math.floor(x / BC) * 4096 + Math.floor(y / BC)) || []) {
+    if (h < zb || h > zt + CAM_PAD || x < e[0] - CAM_PAD || x > e[2] + CAM_PAD || y < e[1] - CAM_PAD || y > e[3] + CAM_PAD) continue;
+    let inside = false;
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      const a = ring[i], b = ring[j];
+      if ((a.y > y) !== (b.y > y) && x < (b.x - a.x) * (y - a.y) / (b.y - a.y) + a.x) inside = !inside;
+      const vx2 = b.x - a.x, vy2 = b.y - a.y, t = THREE.MathUtils.clamp(((x - a.x) * vx2 + (y - a.y) * vy2) / (vx2 * vx2 + vy2 * vy2 || 1), 0, 1);
+      if (Math.hypot(a.x + vx2 * t - x, a.y + vy2 * t - y) < CAM_PAD) return true;
+    }
+    if (inside) return true;
+  }
+  return false;
+}
+function camClear(ox, oz, yaw, D, h) {                           // free distance from (ox, oz) along -yaw, up to D, in 0.5 m steps
+  const sx = -Math.sin(yaw), sz = -Math.cos(yaw);
+  for (let d = 2; d <= D; d += 0.5) if (camBlocked(ox + sx * d, -(oz + sz * d), h)) return Math.max(2, d - 0.5);
+  return D;
+}
 const STAT = { grade: document.getElementById('sGrade'), speed: document.getElementById('sSpeed'), power: document.getElementById('sPower'), alt: document.getElementById('sAlt') };
 const profCv = document.getElementById('prof'), pc = profCv.getContext('2d');
 const profBase = (() => {                                       // static profile drawn once, marker added per frame
@@ -1636,11 +1946,14 @@ function rideStep(dt) {
   ride.sweepT += dt;
   const yaw = ride.camYaw + ride.orbit + (1 - ride.dr) * 0.44 * Math.sin(ride.sweepT * 2 * Math.PI / 18) * Math.min(1, ride.sweepT / 4);
   const ox = p.x - t.x * 2 * ride.dr, oz = p.z - t.z * 2 * ride.dr;   // orbit centre between rider and lion
-  const cx = ox - Math.sin(yaw) * ride.camD, cz = oz - Math.cos(yaw) * ride.camD;
+  // pull in at once in front of a facade (no frame inside a building), let out again slowly once the view is free
+  const free = camClear(ox, oz, yaw, ride.camD, p.y + ride.camH);
+  ride.camF = ride.camF === null || free < ride.camF ? free : ride.camF + (free - ride.camF) * (1 - Math.exp(-dt * 1.5));
+  const cx = ox - Math.sin(yaw) * ride.camF, cz = oz - Math.cos(yaw) * ride.camF;
   camera.position.set(cx, Math.max(p.y + ride.camH, gh(cx, -cz) + 1.2), cz);
   look.set(ox + sy * ahead, p.y + 1.3 - 0.5 * ride.dr, oz + cy * ahead); camera.lookAt(look);
   setShadow('ride', p.clone().addScaledVector(t, 120));   // shadow window reaches further ahead than behind
-  updateStats(grade, ride.v, P, p.y - RIDE_Y + BASE);
+  updateStats(grade, ride.v, P, gh(p.x, -p.z) + BASE);
   const dCol = Math.hypot(p.x, p.z), [vx, vd] = vitLocal(p.x, -p.z);
   const where = placeName(p, dCol, vx, vd);
   if (LIVE.on) { liveHud(where); return; }
@@ -1655,7 +1968,7 @@ function startRide() {
     }
     ride.s = 0; ride.v = 2; ride.mult = 1; ride.heading = null; const { p, t } = placeBike(1);
     LION.d = LION.heading = null; LION.t = LION.phase = 0; LION.v = 2; lionStep(0);
-    ride.camYaw = ride.heading + Math.PI; ride.camD = 14; ride.camH = 4; ride.sweepT = 0;   // start in front of the rider, then swing behind
+    ride.camYaw = ride.heading + Math.PI; ride.camD = 14; ride.camF = null; ride.camH = 4; ride.sweepT = 0;   // start in front of the rider, then swing behind
   }
   ride.on = true; bike.visible = lion.visible = true; routeLine.getObjectByName('overview').visible = false; camera.fov = 93; camera.near = 0.5; camera.far = 2600; scene.fog.near = 700; scene.fog.far = 2500; camera.updateProjectionMatrix(); controls.enabled = false; controls.autoRotate = false; tween = null;
   hud.style.display = ''; document.getElementById('stats').style.display = ''; document.getElementById('ride').classList.add('on'); setT(document.getElementById('ride'), 'ride.pause');
@@ -1853,7 +2166,7 @@ function placeGhost(g, s, phi, side) {                            // 'side' metr
   const L = ROUTE_LEN, u = THREE.MathUtils.clamp(s / L, 0, 1) || 0, p = route.getPointAt(u);
   const pa = route.getPointAt(Math.max(0, u - 2 / L)), pb = route.getPointAt(Math.min(1, u + 2 / L)), h = Math.atan2(pb.x - pa.x, pb.z - pa.z);
   p.x -= Math.cos(h) * side; p.z += Math.sin(h) * side;
-  p.y = gh(p.x, -p.z) + RIDE_Y;
+  p.y = gh(p.x, -p.z) + RIDE_Y + routeEx(s);
   g.position.copy(p); g.rotation.set(-Math.atan(profAt(GRADE, s)), h, 0, 'YXZ');
   pedal(phi, g.userData.legs);
   for (const w of g.userData.wheels) w.rotation.x = s / 0.34;
@@ -1916,7 +2229,7 @@ const LABELS = [
   ['Palatin', 41.88905, 12.48740, 50], ['Tempel der Venus und Roma', 41.89085, 12.48895, 30], ['Circus Maximus', 41.88610, 12.48510, 20],
   ['Vittoriano', 41.89440, 12.48300, 88], ['Palazzo Venezia', 41.89625, 12.48170, 48], ['Colle Oppio / Domus Aurea', 41.89290, 12.49560, 30], ['San Clemente', 41.88940, 12.49760, 35],
   ['Kaiserforen', 41.89430, 12.48700, 30], ['Celio', 41.88570, 12.49380, 30],
-  ['Stazione Termini', 41.90100, 12.50160, 35], ['Santa Maria Maggiore', 41.89760, 12.49850, 80], ['Piazza della Repubblica', 41.90270, 12.49660, 30],
+  ['Pantheon', 41.89861, 12.47687, 50], ['Trevi-Brunnen', 41.90089, 12.48331, 32], ['Stazione Termini', 41.90100, 12.50160, 35], ['Santa Maria Maggiore', 41.89760, 12.49850, 80], ['Piazza della Repubblica', 41.90270, 12.49660, 30],
 ].map(([name, lat, lon, h]) => {
   const [x, y] = ll(lat, lon), el = document.createElement('div');
   if (I18N.de['l.' + name]) setT(el, 'l.' + name); else el.textContent = name; document.getElementById('labels').appendChild(el);
@@ -1955,8 +2268,9 @@ function drawFrame() {
   if (!FISH.on) { renderer.render(scene, camera); sceneInfo = { ...renderer.info.render }; return; }
   FISH.cur += ((ride.on ? FISH.kRide : FISH.k) - FISH.cur) * 0.06; if (Math.abs(FISH.cur - (ride.on ? FISH.kRide : FISH.k)) < 1e-3) FISH.cur = ride.on ? FISH.kRide : FISH.k;
   const k = FISH.cur, w = renderer.domElement.width, h = renderer.domElement.height, a = w / h;
-  // supersample only at low pixel ratios: on a Retina screen (ratio ≥ 1.5) the centre is sharp enough and the extra pixels would halve the frame rate
-  const ss = renderer.getPixelRatio() >= 1.5 ? 1 : Math.min(1 + (FISH.ss - 1) * THREE.MathUtils.clamp((k - FISH.k) / (FISH.kRide - FISH.k), 0, 1), renderer.capabilities.maxTextureSize / Math.max(w, h));
+  // supersample only on screens without Retina (PR_MAX < 1.5): there the pixel ratio can't go higher. On a Retina screen the
+  // adaptive pixel ratio decides alone; supersampling there would make lowering the ratio useless (1.25·1.2 costs as much as 1.5)
+  const ss = PR_MAX >= 1.5 ? 1 : Math.min(1 + (FISH.ss - 1) * THREE.MathUtils.clamp((k - FISH.k) / (FISH.kRide - FISH.k), 0, 1), renderer.capabilities.maxTextureSize / Math.max(w, h));
   const tw = Math.round(w * ss), th = Math.round(h * ss);
   if (fishRT.width !== tw || fishRT.height !== th) fishRT.setSize(tw, th);
   // the warp reaches furthest at the corners: ov = (1−k) + k·(a²+1). Widening the view by ov in tangent space
@@ -2007,6 +2321,7 @@ for (const l of LABELS) if (!['Kolosseum', 'Konstantinsbogen'].includes(l.name))
   if (I18N.de['l.' + l.name]) setT(o, 'l.' + l.name); else o.textContent = l.name;
   placeSel.appendChild(o);
 }
+Object.assign(VIEWS, { Pantheon: [210, 70, 170, -1291, 940, 16], 'Trevi-Brunnen': [340.6, 55, 62, -756, 1178, 6] });   // closer, from the piazza in front
 placeSel.onchange = () => { if (!ride.on) view(placeSel.value); placeSel.value = ''; };   // back to the placeholder so the same place can be picked again
 document.getElementById('rot').onclick = e => { controls.autoRotate = !controls.autoRotate; e.target.classList.toggle('on', controls.autoRotate); };
 document.getElementById('lab').onclick = e => { showLabels = !showLabels; e.target.classList.toggle('on', showLabels); };
@@ -2105,6 +2420,20 @@ function winStep(dt) {
   NIGHT.objs.add(NIGHT.dome);
 
   // street lamps along car roads every ~32 m, alternating sides; posts + glowing lanterns + light pools on the ground
+  // a lamp stands beside its own road, but that spot can lie on the carriageway of a crossing or parallel road (40 % did,
+  // mostly at junctions, and the rider and lion rode through the posts): reject spots within any road's half width + 0.8 m
+  const SEG = new Map(), SC = 20, segAt = (cx, cy) => SEG.get(cx * 4096 + cy);
+  for (const r of S.roads) for (let i = 0; i < r.p.length - 2; i += 2) {
+    const sg = [r.p[i], r.p[i + 1], r.p[i + 2], r.p[i + 3], r.w / 2 + 0.8];
+    for (let cx = Math.floor((Math.min(sg[0], sg[2]) - sg[4]) / SC); cx <= Math.floor((Math.max(sg[0], sg[2]) + sg[4]) / SC); cx++)
+      for (let cy = Math.floor((Math.min(sg[1], sg[3]) - sg[4]) / SC); cy <= Math.floor((Math.max(sg[1], sg[3]) + sg[4]) / SC); cy++) {
+        const k = cx * 4096 + cy; if (!SEG.has(k)) SEG.set(k, []); SEG.get(k).push(sg);
+      }
+  }
+  const onRoad = (x, y) => (segAt(Math.floor(x / SC), Math.floor(y / SC)) || []).some(([ax, ay, bx, by, r]) => {
+    const vx = bx - ax, vy = by - ay, t = THREE.MathUtils.clamp(((x - ax) * vx + (y - ay) * vy) / (vx * vx + vy * vy || 1), 0, 1);
+    return Math.hypot(ax + vx * t - x, ay + vy * t - y) < r;
+  });
   const L = [];
   for (const r of S.roads) {
     if (r.s) continue;
@@ -2115,7 +2444,7 @@ function winStep(dt) {
         const t = d / len, nx = -(y1 - y0) / len, ny = (x1 - x0) / len, off = r.w / 2 + 1.2;
         const x = x0 + (x1 - x0) * t + nx * off * side, y = y0 + (y1 - y0) * t + ny * off * side;
         const [vx, vd] = vitLocal(x, y);
-        if (Math.abs(x) < TR.half - 20 && Math.abs(y) < TR.half - 20 && !inCol(x, y) && !(Math.abs(vx) < 62 && vd > -42 && vd < 120)) L.push([x, y, -nx * side, -ny * side]);
+        if (Math.abs(x) < TR.half - 20 && Math.abs(y) < TR.half - 20 && !inCol(x, y) && !(Math.abs(vx) < 62 && vd > -42 && vd < 120) && !onRoad(x, y) && !inLandmark(x, y)) L.push([x, y, -nx * side, -ny * side]);
         side = -side;
       }
       acc = (acc + len) % 32;
@@ -2155,7 +2484,7 @@ function setNight(on) {
   hemi.color.setHex(on ? 0x3a4a78 : DAY.hemi[0]); hemi.groundColor.setHex(on ? 0x1a1612 : DAY.hemi[1]); hemi.intensity = on ? 0.6 : DAY.hemi[2];
   sun.color.setHex(on ? 0x9db2ff : DAY.sun[0]); sun.intensity = on ? 1.2 : DAY.sun[1];
   MAT.win.emissiveIntensity = MAT.shop.emissiveIntensity = on ? 1 : 0;
-  MAT.col.emissiveIntensity = on ? 0.6 : 0; MV.m.emissiveIntensity = on ? 0.15 : 0; MV.g.emissiveIntensity = on ? 5 : 1;
+  MAT.col.emissiveIntensity = on ? 0.6 : 0; MV.m.emissiveIntensity = on ? 0.15 : 0; LM.stone.emissiveIntensity = on ? 0.35 : 0; LM.brick.emissiveIntensity = on ? 0.3 : 0; LM.water.emissiveIntensity = on ? 0.6 : 0; MV.g.emissiveIntensity = on ? 5 : 1;
   NIGHT.frame = 0; renderer.shadowMap.needsUpdate = true;
   document.getElementById('nightBtn').classList.toggle('on', on);
 }
@@ -2177,7 +2506,7 @@ document.getElementById('load').remove();
 window.__ready = true;
 const INFO = location.search.includes('info') && { f: 0 };
 const fpsEl = document.getElementById('fps'), fps = { n: 0, t0: performance.now() };
-const clock = new THREE.Clock(), perf = { n: 0, t: 0, slow: 0, fast: 0, dtS: 1 / 60 }, PR_MAX = Math.min(devicePixelRatio, 2);
+const clock = new THREE.Clock(), perf = { n: 0, t: 0, slow: 0, fast: 0, dtS: 1 / 60, cap: Infinity, capT: 0 }, PR_MAX = Math.min(devicePixelRatio, 2);
 if (location.hash === '#ride') { startRide(); for (let i = 0; ride.on && i < +(new URLSearchParams(location.search).get('t') || 0) * 30; i++) rideStep(1 / 30); }
 renderer.setAnimationLoop(() => {
   if (tween) {
@@ -2196,16 +2525,19 @@ renderer.setAnimationLoop(() => {
     if (lift > 0) { camera.position.y += lift; controls.target.y += lift; }
   }
   // adaptive resolution: keep ~60 fps by trading pixel ratio between 1 and the display's native ratio
-  // resizing the drawing buffer costs a frame, so step down only after two slow windows, step up only after
-  // five fast ones, and never step up during the ride (an oscillating resolution shows up as periodic jerks)
+  // resizing the drawing buffer costs a frame, so step down only after two slow windows and step up only after five
+  // fast ones (ten in the ride). The ride goes on lap after lap, so it must recover too, or one slow stretch would leave
+  // it blurred for good. Against oscillation, a ratio that was too slow is not tried again for 60 s (perf.cap)
   perf.t += dt;
   if (++perf.n === 60) {
     const ft = perf.t / perf.n, pr = renderer.getPixelRatio();
     perf.slow = ft > 1 / 48 ? perf.slow + 1 : 0; perf.fast = ft < 1 / 58 ? perf.fast + 1 : 0;
-    if (perf.slow >= 2 && pr > 1) { renderer.setPixelRatio(Math.max(1, pr - 0.25)); perf.slow = 0; }
-    else if (perf.fast >= 5 && pr < PR_MAX && !ride.on) { renderer.setPixelRatio(Math.min(PR_MAX, pr + 0.25)); perf.fast = 0; }
+    const up = Math.min(PR_MAX, pr + 0.25);
+    if (perf.slow >= 2 && pr > 1) { perf.cap = pr; perf.capT = now; renderer.setPixelRatio(Math.max(1, pr - 0.25)); perf.slow = 0; }
+    else if (perf.fast >= (ride.on ? 10 : 5) && pr < PR_MAX && (up < perf.cap || now - perf.capT > 60000)) { renderer.setPixelRatio(up); perf.fast = 0; }
     perf.n = perf.t = 0;
   }
+  waterStep(dt);
   drawFrame();
   updateLabels();
   if (NIGHT.on) { nightStep(); winStep(dt); }
