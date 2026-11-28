@@ -462,7 +462,7 @@ for (const b of S.buildings) {
   const pv = b.n === 'Palazzo Venezia', T = kind => G[kind].at(cx, cy);
   const k = pv ? C('#c9b48e') : parseColor(b.c, '#d9a066').multiplyScalar(0.94 + rnd() * 0.1);
   const hc = gh(cx, cy), hb = Math.min(...outer.map(p => gh(p.x, p.y)));
-  const zt = hc + (pv ? 27 : b.n === 'Palazzo Poli' ? 24 : Math.max(b.z, b.m + 1)), zb = b.m > 0 ? hc + b.m : hb - 2;
+  const zt = hc + (pv ? 27 : b.n === 'Palazzo Poli' ? 21.2 : Math.max(b.z, b.m + 1)), zb = b.m > 0 ? hc + b.m : hb - 2;
   bldAdd(outer, zb, pv ? hc + 40 : zt);
   const kind = pv ? 'mono' : b.k === 1 ? 'stone' : b.k === 2 ? 'mono' : 'win';
   if (pv) {                                                      // Guelph merlons + corner tower on Piazza Venezia
@@ -945,8 +945,8 @@ const waterTex = tex(256, 256, (g, w, h) => {
   }
 });
 const fallTex = tex(64, 256, (g, w, h) => {
-  g.clearRect(0, 0, w, h);
-  for (let i = 0; i < 90; i++) { g.fillStyle = `rgba(255,255,255,${0.25 + lrng() * 0.6})`; g.fillRect(lrng() * w, lrng() * h, 1 + lrng() * 3, 20 + lrng() * 90); }
+  g.fillStyle = 'rgba(235,248,255,.42)'; g.fillRect(0, 0, w, h);
+  for (let i = 0; i < 260; i++) { g.fillStyle = `rgba(255,255,255,${0.08 + lrng() * 0.3})`; g.fillRect(lrng() * w, lrng() * h, 1 + lrng() * 2, 30 + lrng() * 120); }
 });
 fallTex.colorSpace = THREE.NoColorSpace;
 const LM = {
@@ -961,9 +961,20 @@ const LM = {
   granite: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.4, side: THREE.DoubleSide }),
   lead: new THREE.MeshStandardMaterial({ color: 0x8a8e92, vertexColors: true, metalness: 0.35, roughness: 0.55, side: THREE.DoubleSide }),
   water: new THREE.MeshStandardMaterial({ map: waterTex, roughness: 0.12, metalness: 0.1, transparent: true, opacity: 0.9, emissive: 0x1aa6c4, emissiveIntensity: 0 }),
-  fall: new THREE.MeshBasicMaterial({ map: fallTex, transparent: true, opacity: 0.85, depthWrite: false, side: THREE.DoubleSide }),
+  fall: new THREE.MeshBasicMaterial({ map: fallTex, transparent: true, opacity: 0.75, depthWrite: false, side: THREE.DoubleSide }),
 };
 waterTex.repeat.set(0.12, 0.12);
+{ // diamond coffers of the Trevi exedra's half dome
+  const t = tex(256, 256, (g, w, h) => {
+    g.fillStyle = '#cdb98f'; g.fillRect(0, 0, w, h);
+    g.strokeStyle = '#f0e6cf'; g.lineWidth = 14;
+    for (let i = -2; i <= 2; i++) { g.beginPath(); g.moveTo(i * 128, 0); g.lineTo(i * 128 + 256, 256); g.stroke(); g.beginPath(); g.moveTo(i * 128 + 256, 0); g.lineTo(i * 128, 256); g.stroke(); }
+    g.strokeStyle = 'rgba(90,70,40,.35)'; g.lineWidth = 4;
+    for (let i = -2; i <= 2; i++) { g.beginPath(); g.moveTo(i * 128 + 9, 0); g.lineTo(i * 128 + 265, 256); g.stroke(); }
+    lspeck(g, w, h, 1500, 0.08);
+  });
+  LM.coffer = mat(t, { roughness: 0.7, emissive: 0xfff0dc, emissiveMap: t, emissiveIntensity: 0 });
+}
 LM.brick.emissive = new THREE.Color(0xffc890); LM.brick.emissiveMap = LM.brick.map; LM.brick.emissiveIntensity = 0;   // floodlit at night
 function waterStep(dt) { waterTex.offset.x += dt * 0.004; waterTex.offset.y += dt * 0.006; fallTex.offset.y += dt * 1.4; }
 const KEEP_OUT = [], inLandmark = (x, y) => KEEP_OUT.some(f => f(x, y));
@@ -1073,115 +1084,307 @@ const TRAV = C('#e6dcc6'), TRAV2 = C('#d4c8ae'), STAT_W = C('#f3eee4'), DARKW = 
   KEEP_OUT.push((x, y) => { const [lx, lz] = toL(x, y); return Math.hypot(lx, lz) < 32 || (Math.abs(lx) < 20 && lz > -52 && lz < 0) || (Math.abs(lx) < 26 && lz > 12 && lz < 36) || Math.hypot(lx - ox, lz - oz) < 6.5; });
 }
 
-// Fontana di Trevi on the south front of Palazzo Poli. Frame: the OSM facade line (49.7 m), x along it, z into the palace.
-// Centre: triumphal arch with four Corinthian columns, the exedra with Oceanus on his shell chariot, two sea-horses
-// with tritons, Abundance and Salubrity in the side niches; wings with giant pilasters and two rows of windows; attic with
-// Clement XII's inscription, four statues and the papal arms; the travertine reef across the whole width with cascades
-// into the basin.
+// Fontana di Trevi on the south front of Palazzo Poli. Frame: the OSM facade line (49.7 m), x along it, z into the palace,
+// the front faces −z. Proportions measured on photos (Wikimedia Commons front panorama, 49.15 m wide, 26.3 m high):
+// giant order on the whole front (capitals 14.3–15.6 m, entablature to 18 m); centre: triumphal arch with four columns at
+// ±5.3 / ±10.85 m, the exedra (Ionic column pairs, diamond-coffered half dome) with Oceanus on his shell, Abundance and
+// Salubrity in the side niches with reliefs above, attic with Clement XII's inscription, four statues, balustrade and the
+// papal arms with two Fames (to 26.3 m); wings: three bays with shuttered windows (triangular / segmental pediments,
+// balconies) and an attic storey; the reef of stratified travertine slabs across the whole width, sea-horses with fish
+// tails (restive left, calm right) led by tritons, the two-tier central cascade and the basin.
 {
-  const TRV = { x: -757.65, y: 1186.35, rot: Math.atan2(-16.5, -46.9) }, W2 = 24.8;
+  const TRV = { x: -757.65, y: 1186.35, rot: Math.atan2(-16.5, -46.9) }, W2 = 24.6, CW = 12.3;   // half width, half width of the centre
   const y0 = gh(TRV.x + 0.3319 * 8, TRV.y - 0.9433 * 8);          // piazza level 8 m in front of the facade
   const g = new THREE.Group(); g.position.set(TRV.x, y0, -TRV.y); g.rotation.y = TRV.rot;
-  const TS = new Geo(), TD = new Geo(), NICHE = C('#bdb099');
-  // wall: everything except the exedra (x ±3.9, y 3…17.6, 1.6 m deep)
-  box(TS, -W2, -3.9, -2, 19.3, -0.5, 3, TRAV); box(TS, 3.9, W2, -2, 19.3, -0.5, 3, TRAV);
-  box(TS, -3.9, 3.9, 17.6, 19.3, -0.5, 3, TRAV); box(TS, -3.9, 3.9, -2, 3, -2.2, 3, TRAV); box(TS, -3.9, 3.9, 3, 17.6, -0.55, 3, TRAV);
-  for (const s of [-1, 1]) box(TS, s < 0 ? -10.4 : 3.9, s < 0 ? -3.9 : 10.4, -2, 19.3, -2.2, -0.5, TRAV);   // piers of the arch
-  // exedra: half cylinder and half dome, archivolt, spandrels up to the entablature
-  lathe(TS, 0, -2.2, [[3.9, 3], [3.9, 13.7]], NICHE, 20, 3, 0, Math.PI, 0.4);   // 1.6 m deep: stays in front of the palace wall
-  const hd = []; for (let i = 0; i <= 8; i++) { const p = i / 8 * Math.PI / 2; hd.push([3.9 * Math.cos(p), 13.7 + 3.9 * Math.sin(p)]); }
-  lathe(TS, 0, -2.2, hd, C('#c8bca5'), 20, 3, 0, Math.PI, 0.4);
-  for (let i = 0; i < 20; i++) {
-    const a0 = i / 20 * Math.PI, a1 = (i + 1) / 20 * Math.PI, A = (r, a) => [r * Math.cos(a), 13.7 + r * Math.sin(a)];
-    const [p0, q0] = A(3.9, a0), [p1, q1] = A(3.9, a1), [r0, t0] = A(4.6, a0), [r1, t1] = A(4.6, a1);
-    TS.quad([p0, q0, -2.3], [p1, q1, -2.3], [r1, t1, -2.3], [r0, t0, -2.3], Z, Z, Z, Z, TRAV2);
-    TS.quad([p0, q0, -2.2], [p1, q1, -2.2], [p1, 19.3, -2.2], [p0, 19.3, -2.2], Z, Z, Z, Z, TRAV);
-  }
-  // giant order of the centre: four columns on pedestals
-  for (const x of [-9.4, -4.75, 4.75, 9.4]) {
-    boxC(TS, x, -3.1, 2.1, 1.9, -0.5, 6, TRAV2);
-    cyl(TS, x, -3.2, 6, 6.5, 0.95, 0.85, TRAV, 20);
-    cyl(TS, x, -3.2, 6.5, 17.8, 0.72, 0.62, TRAV, 20);
-    cyl(TS, x, -3.2, 17.8, 18.7, 0.65, 0.95, TRAV2, 16);
-    boxC(TS, x, -3.2, 2.1, 2.1, 18.7, 19.3, TRAV);
-    boxC(TS, x, -4.1, 1.5, 1.4, 21.6, 22.4, TRAV2);                // statue on the entablature
-    figure(TS, x, 22.4, -4.1, 3.0, STAT_W);
-  }
-  for (const s of [-1, 1]) {
-    const x = s * 7.08;                                           // side niches: Abundance (left), Salubrity (right), reliefs above
-    box(TD, x - 1.15, x + 1.15, 6.6, 11.8, -2.27, -2.2, NICHE);
-    boxC(TS, x, -2.7, 1.7, 1.0, 6, 6.6, TRAV2); figure(TS, x, 6.6, -2.7, 3.7, STAT_W);
-    box(TS, x - 1.45, x + 1.45, 12.8, 16.4, -2.35, -2.2, TRAV2);
-    for (let i = 0; i < 4; i++) ell(TS, x - 0.95 + i * 0.63, 14.5, -2.38, 0.24, 1.1, 0.12, STAT_W, 8);
-  }
-  box(TS, -10.9, 10.9, 19.3, 21.6, -4.6, -0.5, TRAV);              // entablature of the centre
-  box(TS, -11.2, 11.2, 21, 21.6, -4.9, -0.5, TRAV2);
-  // attic with the inscription, cornice, papal arms with two Fames
-  box(TS, -10.4, 10.4, 21.6, 24.4, -3, -0.5, TRAV); box(TS, -10.8, 10.8, 24.4, 25, -3.4, -0.5, TRAV2);
-  plaque(g, inscription([['CLEMENS · XII · PONT · MAX', 66], ['AQVAM · VIRGINEM · COPIA · ET · SALVBRITATE · COMMENDATAM', 34],
-    ['CVLTV · MAGNIFICO · ORNAVIT', 40], ['ANNO · DOMINI · MDCCXXXV · PONTIF · VI', 36]], 1024, 340, '#ddd2bb', '#3a3127'), 0, 23, -3.03, 8.6, 2.5);
-  ell(TS, 0, 26.6, -2.6, 1.3, 1.6, 0.4, TRAV2, 12); cyl(TS, 0, -2.6, 28.1, 28.9, 0.45, 0.25, TRAV2, 10);
-  for (const s of [-1, 1]) { ell(TS, s * 2.2, 25.5, -2.6, 1.1, 0.45, 0.5, STAT_W, 8); ell(TS, s * 1.5, 26.1, -2.6, 0.4, 0.55, 0.35, STAT_W, 8); ell(TS, s * 1.3, 26.85, -2.6, 0.22, 0.25, 0.22, STAT_W, 8); }
-  // wings: rusticated ground floor, giant pilasters, balconied windows, attic with balustrade
-  for (const s of [-1, 1]) {
-    const xl = s < 0 ? -W2 : 10.4, xr = s < 0 ? -10.4 : W2;
-    for (const y of [1.6, 3.2, 4.8, 6.4]) box(TS, xl, xr, y, y + 0.12, -0.62, -0.5, TRAV2);
-    box(TS, xl, xr, 7.6, 8.1, -0.8, -0.5, TRAV2);
-    for (const x of [11, 15.6, 20.2, 24.3]) { boxC(TS, s * x, -0.65, 1.3, 0.3, 8.1, 18, TRAV); boxC(TS, s * x, -0.75, 1.6, 0.5, 18, 19.3, TRAV2); }
-    for (const x of [13.3, 17.9, 22.25]) {
-      const cx = s * x;
-      box(TS, cx - 1.35, cx + 1.35, 8.7, 12.6, -0.6, -0.5, TRAV2); box(TD, cx - 1, cx + 1, 9, 12.2, -0.64, -0.6, DARKW);
-      box(TS, cx - 1.6, cx + 1.6, 12.6, 13, -0.8, -0.5, TRAV); TS.tri([cx - 1.6, 13, -0.8], [cx + 1.6, 13, -0.8], [cx, 13.8, -0.8], Z, Z, Z, TRAV);
-      box(TS, cx - 1.5, cx + 1.5, 8.1, 8.9, -1.2, -0.5, TRAV);        // balcony
-      box(TS, cx - 1.2, cx + 1.2, 14.2, 17, -0.6, -0.5, TRAV2); box(TD, cx - 0.9, cx + 0.9, 14.5, 16.7, -0.64, -0.6, DARKW);
-      box(TS, cx - 1.35, cx + 1.35, 17, 17.3, -0.75, -0.5, TRAV);
+  const TS = new Geo(), TD = new Geo(), TK = new Geo(), TR = new Geo();   // travertine, dark/flat, coffers, reef
+  const NICHE = C('#cfc3ab'), SHUT = C('#8b9a86'), GLASS = C('#3b413e'), MARB = C('#f2ede3'), ROCKC = ['#d8ccb2', '#cbbd9f', '#e0d6c0', '#bfae8d'];
+  const V3 = THREE.Vector3;   // note: +x is the viewer's LEFT (west) when standing in the piazza
+  // ---- figure helpers (local frame of g; every figure faces −z) ----
+  function limb(G, a, b, r0, r1, k, seg = 8) {                    // tapered tube a → b with end caps
+    const A = new V3(...a), B = new V3(...b), d = B.clone().sub(A), L = d.length(); if (L < 1e-4) return; d.divideScalar(L);
+    const u = new V3().crossVectors(d, Math.abs(d.y) < 0.9 ? new V3(0, 1, 0) : new V3(1, 0, 0)).normalize(), v = new V3().crossVectors(d, u);
+    const R = (C0, r, t) => C0.clone().addScaledVector(u, Math.cos(t) * r).addScaledVector(v, Math.sin(t) * r).toArray();
+    for (let i = 0; i < seg; i++) {
+      const t0 = i / seg * 6.2832, t1 = (i + 1) / seg * 6.2832;
+      G.quad(R(A, r0, t0), R(A, r0, t1), R(B, r1, t1), R(B, r1, t0), Z, Z, Z, Z, k);
+      G.tri(A.toArray(), R(A, r0, t1), R(A, r0, t0), Z, Z, Z, k); G.tri(B.toArray(), R(B, r1, t0), R(B, r1, t1), Z, Z, Z, k);
     }
-    box(TS, xl - (s < 0 ? 0.3 : 0), xr + (s > 0 ? 0.3 : 0), 19.3, 21.5, -1.2, -0.5, TRAV);
-    box(TS, xl - (s < 0 ? 0.5 : 0), xr + (s > 0 ? 0.5 : 0), 21, 21.5, -1.5, -0.5, TRAV2);
-    box(TS, xl, xr, 21.5, 23.6, -0.9, -0.5, TRAV); box(TS, xl, xr, 23.6, 23.8, -1, -0.5, TRAV2);
-    for (let x = xl + 0.35; x < xr - 0.2; x += 0.55) cyl(TS, x, -0.75, 23.8, 24.6, 0.13, 0.1, TRAV, 6);
-    box(TS, xl, xr, 24.6, 24.85, -1, -0.5, TRAV2);
   }
-  // the reef: travertine rocks across the whole front, highest under Oceanus
-  const reefH = x => 1.4 + 3.4 * Math.exp(-((x / 8.5) ** 2));
-  for (let x = -W2 + 1; x <= W2 - 1; x += 2.2) ell(TS, x, 0.2, -1.8, 2.3, reefH(x) * 0.75, 1.9, LCj('#cdbfa3', 0.15), 10);
-  for (let i = 0; i < 110; i++) {
-    const x = (lrng() * 2 - 1) * (W2 - 1.5), h = reefH(x), d = 1.5 + lrng() * (Math.abs(x) < 9 ? 6 : 3.2);
-    ell(TS, x, lrng() * h * 0.7, -d, 0.8 + lrng() * 1.6, 0.5 + lrng() * h * 0.4, 0.7 + lrng() * 1.3, LCj(lrng() < 0.3 ? '#b7ab90' : '#d6c9ae', 0.18), 8);
+  const chain = (G, pts, r0, r1, k, seg = 8) => { for (let i = 0; i < pts.length - 1; i++) limb(G, pts[i], pts[i + 1], r0 + (r1 - r0) * i / (pts.length - 1), r0 + (r1 - r0) * (i + 1) / (pts.length - 1), k, seg); };
+  // human figure, height h, feet at (x, y, z); p: robe, stride, lean, arms {l, r: [elbow, hand]} in body units (1.8 = height)
+  function statue(G, x, y, z, h, k, p = {}) {
+    const s = h / 1.8, P = (a, b, c) => [x + a * s, y + b * s, z + c * s], lean = p.lean || 0;
+    const T = (a, b, c) => P(a + lean * (b - 0.9) * 0.15, b, c);  // slight sideways sway of the upper body
+    ell(G, ...T(0, 1.66, 0), 0.1 * s, 0.12 * s, 0.11 * s, k, 10);
+    if (p.beard) ell(G, ...T(0, 1.55, -0.07), 0.08 * s, 0.1 * s, 0.06 * s, k, 8);
+    limb(G, T(0, 1.42, 0), T(0, 1.58, 0), 0.055 * s, 0.05 * s, k);
+    ell(G, ...T(0, 1.26, 0), (p.male ? 0.22 : 0.19) * s, 0.25 * s, 0.13 * s, k, 10);
+    ell(G, ...T(0, 0.98, 0), 0.17 * s, 0.15 * s, 0.12 * s, k, 10);
+    const arms = p.arms || {};
+    for (const sd of [-1, 1]) {
+      const [el, ha] = arms[sd < 0 ? 'l' : 'r'] || [[0.27 * sd, 1.12, 0], [0.26 * sd, 0.84, -0.06]];
+      limb(G, T(0.21 * sd, 1.44, 0), T(...el), 0.06 * s, 0.048 * s, k); limb(G, T(...el), T(...ha), 0.048 * s, 0.036 * s, k);
+      ell(G, ...T(0.21 * sd, 1.44, 0), 0.07 * s, 0.07 * s, 0.07 * s, k, 8); ell(G, ...T(...ha), 0.045 * s, 0.05 * s, 0.045 * s, k, 6);
+    }
+    if (p.tail) return;                                           // tritons: the fish tail replaces the legs
+    if (p.robe) {
+      cyl(G, x, z, y + 0.02 * s, y + 1.02 * s, 0.3 * s, 0.17 * s, k, 12);
+      for (let i = 0; i < 5; i++) { const a = -2.4 + i * 0.4; limb(G, P(Math.cos(a) * 0.27, 0.05, Math.sin(a) * 0.27), P(Math.cos(a) * 0.16, 0.95, Math.sin(a) * 0.16), 0.04 * s, 0.02 * s, k, 5); }   // folds
+    } else {
+      const st = p.stride || 0;
+      for (const sd of [-1, 1]) {
+        const f = sd < 0 ? -st : st * 0.6;
+        limb(G, P(0.09 * sd, 0.95, 0), P(0.11 * sd, 0.52, f * 0.12), 0.085 * s, 0.06 * s, k); limb(G, P(0.11 * sd, 0.52, f * 0.12), P(0.12 * sd, 0.08, f * 0.28), 0.06 * s, 0.045 * s, k);
+        ell(G, ...P(0.12 * sd, 0.04, f * 0.28 - 0.06), 0.05 * s, 0.04 * s, 0.11 * s, k, 6);
+      }
+    }
+    if (p.cloak) ell(G, ...T(p.cloak * 0.18, 1.0, 0.16), 0.32 * s, 0.62 * s, 0.1 * s, k, 10);
   }
-  // Oceanus on the shell chariot, sea-horses (one calm, one restive) led by tritons
-  ell(TS, 0, 4.5, -2.8, 2.0, 0.6, 1.5, TRAV2, 14);
-  figure(TS, 0, 4.9, -2.6, 5.8, STAT_W);
-  horse(TS, -3.4, 0.6, -6.6, 0.45, STAT_W); horse(TS, 3.4, 0.9, -6.4, 0.45, STAT_W);
-  figure(TS, -5.6, 0.4, -7.8, 2.8, STAT_W); figure(TS, 5.6, 0.4, -7.6, 2.8, STAT_W);
-  // basin: front curve from 10 m (ends) to 18 m (centre) out, rim 0.7 m thick, 0.8 m high
+  // sea-horse with a fish tail, length ≈ 3.3·s m; rear = rearing (front legs up)
+  function seaHorse(G, x, y, z, s, k, rear) {
+    const a = rear ? 0.5 : 0.08, ca = Math.cos(a), sa = Math.sin(a);
+    const P = (px, py, pz) => { const yy = 1 + (py - 1) * ca - (pz - 0.2) * sa, zz = 0.2 + (py - 1) * sa + (pz - 0.2) * ca; return [x + px * s, y + yy * s, z + zz * s]; };
+    ell(G, ...P(0, 1.15, -0.3), 0.42 * s, 0.45 * s, 0.6 * s, k, 12);                     // chest and barrel
+    limb(G, P(0, 1.4, -0.75), P(0, 1.95, -1.05), 0.24 * s, 0.15 * s, k, 10);             // neck
+    ell(G, ...P(0, 2.0, -1.3), 0.14 * s, 0.17 * s, 0.34 * s, k, 10);                    // head
+    for (const sd of [-1, 1]) limb(G, P(0.07 * sd, 2.12, -1.12), P(0.08 * sd, 2.3, -1.08), 0.04 * s, 0.01 * s, k, 5);   // ears
+    chain(G, [P(0, 1.95, -0.98), P(0, 1.6, -0.62), P(0, 1.45, -0.4)], 0.07 * s, 0.05 * s, k, 6);   // mane
+    for (const sd of [-1, 1]) {                                   // forelegs
+      const kn = rear ? (sd < 0 ? [0.2, 1.35, -1.05] : [0.2, 1.15, -1.1]) : (sd < 0 ? [0.2, 0.55, -0.85] : [0.2, 0.6, -0.6]);
+      const ho = rear ? (sd < 0 ? [0.2, 1.05, -1.25] : [0.2, 0.8, -1.2]) : (sd < 0 ? [0.2, 0.12, -1.0] : [0.2, 0.2, -0.75]);
+      limb(G, P(0.2 * sd, 0.95, -0.55), P(kn[0] * sd, kn[1], kn[2]), 0.1 * s, 0.07 * s, k); limb(G, P(kn[0] * sd, kn[1], kn[2]), P(ho[0] * sd, ho[1], ho[2]), 0.07 * s, 0.06 * s, k);
+      ell(G, ...P(ho[0] * sd, ho[1], ho[2]), 0.12 * s, 0.05 * s, 0.14 * s, k, 6);       // fin-like hooves
+    }
+    chain(G, [P(0, 1.05, 0.2), P(0, 0.85, 0.75), P(0.15, 0.75, 1.3), P(0.35, 1.0, 1.75), P(0.45, 1.5, 1.95)], 0.4 * s, 0.1 * s, k, 10);   // fish tail
+    ell(G, ...P(0.5, 1.75, 2.0), 0.45 * s, 0.28 * s, 0.06 * s, k, 8);                    // tail fin
+  }
+  // triton: male upper body on a coiled fish tail; pose 'conch' (blowing a shell) or 'lead' (reaching for the bridle)
+  function triton(G, x, y, z, s, k, pose, side) {
+    const arms = pose === 'conch' ? { l: [[-0.22, 1.5, -0.2], [-0.05, 1.62, -0.25]], r: [[0.3, 1.2, -0.1], [0.32, 1.45, -0.25]] }
+      : { l: [[-0.3 * side, 1.35, -0.25], [-0.45 * side, 1.55, -0.5]], r: [[0.3 * side, 1.1, -0.2], [0.42 * side, 1.25, -0.45]] };
+    statue(G, x, y, z, 1.8 * s, k, { male: true, beard: true, tail: true, arms });
+    if (pose === 'conch') limb(G, [x - 0.05 * s, y + 1.62 * s, z - 0.3 * s], [x + 0.05 * s, y + 1.75 * s, z - 0.6 * s], 0.05 * s, 0.12 * s, k, 8);
+    chain(G, [[x, y + 0.92 * s, z], [x + 0.1 * s * side, y + 0.55 * s, z - 0.2 * s], [x + 0.35 * s * side, y + 0.3 * s, z + 0.1 * s], [x + 0.5 * s * side, y + 0.4 * s, z + 0.6 * s], [x + 0.4 * s * side, y + 0.8 * s, z + 0.9 * s]], 0.16 * s, 0.05 * s, k, 8);
+    ell(G, x + 0.4 * s * side, y + 1.0 * s, z + 0.95 * s, 0.25 * s, 0.18 * s, 0.04 * s, k, 8);
+  }
+  // stratified travertine slab: jittered polygon outline, bevelled jittered top
+  function rock(G, cx, yb, cz, w, h, d, k) {
+    const n = 7, out = [], top = [];
+    for (let i = 0; i < n; i++) {
+      const a = i / n * 6.2832 + lrng() * 0.5, r = 0.75 + lrng() * 0.3;
+      out.push([cx + Math.cos(a) * w / 2 * r, cz + Math.sin(a) * d / 2 * r]);
+      top.push([cx + Math.cos(a) * w / 2 * r * 0.82, yb + h * (0.8 + lrng() * 0.35), cz + Math.sin(a) * d / 2 * r * 0.82]);
+    }
+    const ct = [cx, yb + h * 1.02, cz];
+    for (let i = 0; i < n; i++) {
+      const j = (i + 1) % n, [ax, az] = out[i], [bx, bz] = out[j];
+      G.quad([ax, yb, az], [bx, yb, bz], top[j], top[i], [ax / 3, yb / 3], [bx / 3, yb / 3], [bx / 3, (yb + h) / 3], [ax / 3, (yb + h) / 3], k);
+      G.tri(ct, top[i], top[j], [cx / 3, cz / 3], [top[i][0] / 3, top[i][2] / 3], [top[j][0] / 3, top[j][2] / 3], k);
+    }
+  }
+  const rockC = () => LCj(ROCKC[Math.floor(lrng() * ROCKC.length)], 0.12);
+  const reliefTex2 = (n, base) => tex(256, 256, (c, w, h) => {      // high relief: standing figures in a frame
+    c.fillStyle = base; c.fillRect(0, 0, w, h); c.strokeStyle = 'rgba(80,70,55,.5)'; c.lineWidth = 8; c.strokeRect(4, 4, w - 8, h - 8);
+    for (let i = 0; i < n; i++) {
+      const x = (i + 0.5) / n * w + (lrng() - 0.5) * 20, fh = h * (0.5 + lrng() * 0.3);
+      for (const [dx, col] of [[6, 'rgba(70,58,42,.45)'], [0, 'rgba(246,240,228,1)'], [-2, 'rgba(255,255,255,.6)']]) {
+        c.fillStyle = col; c.beginPath(); c.ellipse(x + dx, h - 16 - fh * 0.42, w / n * 0.26, fh * 0.42, (lrng() - 0.5) * 0.4, 0, 7); c.fill();
+        c.beginPath(); c.arc(x + dx, h - 16 - fh * 0.9, w / n * 0.12, 0, 7); c.fill();
+      }
+    }
+    lspeck(c, w, h, 2000, 0.1);
+  });
+
+  // ---- wall body: wings' front at z −0.5, centre at z −2.6; the exedra (x ±3.8, y 3…14.6) is left open ----
+  box(TS, -W2, -CW, -2, 18, -0.5, 3, TRAV); box(TS, CW, W2, -2, 18, -0.5, 3, TRAV);
+  for (const s of [-1, 1]) box(TS, s < 0 ? -CW : 3.8, s < 0 ? -3.8 : CW, -2, 18, -2.6, 3, TRAV);
+  box(TS, -3.8, 3.8, -2, 3, -2.6, 3, TRAV); box(TS, -3.8, 3.8, 14.6, 18, -0.5, 3, TRAV); box(TS, -3.8, 3.8, 3, 14.6, -0.55, 3, TRAV);
+  // exedra: 2.05 m deep (the palace wall stands at z ≈ 0), inner Ionic column pairs, curved inner entablature, coffered half dome
+  const ZS = 2.05 / 3.8;
+  lathe(TS, 0, -2.6, [[3.8, 3], [3.8, 10]], NICHE, 24, 3, 0, Math.PI, ZS);
+  lathe(TS, 0, -2.6, [[3.8, 10], [3.6, 10.1], [3.6, 10.7], [3.8, 10.8]], TRAV2, 24, 3, 0, Math.PI, ZS);
+  const hd = []; for (let i = 0; i <= 10; i++) { const p = i / 10 * Math.PI / 2; hd.push([3.8 * Math.cos(p), 10.8 + 3.8 * Math.sin(p)]); }
+  lathe(TK, 0, -2.6, hd, C('#ffffff'), 24, 1.2, 0, Math.PI, ZS);
+  for (const x of [-3.25, -2.05, 2.05, 3.25]) {
+    const zc = -2.6 + Math.sqrt(Math.max(0, 3.8 ** 2 - x * x)) * ZS - 0.35;
+    cyl(TS, x, zc, 3, 3.4, 0.36, 0.34, TRAV2, 12); cyl(TS, x, zc, 3.4, 9.5, 0.27, 0.23, MARB, 14);
+    boxC(TS, x, zc, 0.75, 0.55, 9.5, 10, TRAV2);
+    for (const sd of [-1, 1]) ell(TS, x + sd * 0.3, 9.72, zc - 0.22, 0.12, 0.12, 0.08, TRAV2, 6);   // volutes
+  }
+  boxC(TS, 0, -2.75, 3.8, 1.6, 2.4, 3.0, TRAV2);                   // ledge Oceanus stands on, inside the niche
+  for (let i = 0; i < 24; i++) {                                  // archivolt, spandrels up to the entablature
+    const a0 = i / 24 * Math.PI, a1 = (i + 1) / 24 * Math.PI, A = (r, a) => [r * Math.cos(a), 10.8 + r * Math.sin(a)];
+    const [p0, q0] = A(3.8, a0), [p1, q1] = A(3.8, a1), [r0, t0] = A(4.5, a0), [r1, t1] = A(4.5, a1);
+    TS.quad([p0, q0, -2.7], [p1, q1, -2.7], [r1, t1, -2.7], [r0, t0, -2.7], Z, Z, Z, Z, TRAV2);
+    TS.quad([p0, q0, -2.6], [p1, q1, -2.6], [p1, 15.6, -2.6], [p0, 15.6, -2.6], Z, Z, Z, Z, TRAV);
+  }
+  boxC(TS, 0, -2.8, 1.1, 0.4, 14.1, 15.4, TRAV2);                 // keystone cartouche
+  for (const s of [-1, 1]) box(TS, s < 0 ? -4.6 : 3.8, s < 0 ? -3.8 : 4.6, 3, 10.8, -2.75, -2.6, TRAV2);   // jambs
+  // ---- giant order of the centre: four columns, ressauts, side niches with statues, reliefs ----
+  const COLX = [-10.85, -5.3, 5.3, 10.85];
+  for (const x of COLX) {
+    boxC(TS, x, -3.4, 2.2, 1.9, -0.5, 3.6, TRAV2);                  // pedestal (mostly in the reef)
+    cyl(TS, x, -3.5, 3.6, 4.1, 0.98, 0.88, TRAV, 20);
+    cyl(TS, x, -3.5, 4.1, 14.3, 0.76, 0.65, TRAV, 24);
+    cyl(TS, x, -3.5, 14.3, 15.2, 0.66, 0.95, TRAV2, 16);             // Corinthian bell with leaves and volutes
+    for (let i = 0; i < 8; i++) { const a = i / 8 * 6.2832; ell(TS, x + Math.cos(a) * 0.72, 14.6, -3.5 + Math.sin(a) * 0.72, 0.16, 0.3, 0.16, TRAV, 6); }
+    boxC(TS, x, -3.5, 2.15, 2.15, 15.2, 15.6, TRAV);
+    box(TS, x - 1.15, x + 1.15, 15.6, 18, -4.7, -2.6, TRAV);          // entablature ressaut
+    box(TS, x - 1.35, x + 1.35, 17.5, 18, -5, -2.6, TRAV2);
+    boxC(TS, x, -4.1, 1.6, 1.4, 18, 18.7, TRAV2);                     // statue on the attic
+  }
+  [[-10.85, 'l'], [-5.3, 'l'], [5.3, 'r'], [10.85, 'r']].forEach(([x, sd], i) => statue(TS, x, 18.7, -4.1, 3.0, MARB,
+    { robe: true, lean: sd === 'l' ? -0.4 : 0.4, arms: i % 2 ? { r: [[0.3, 1.15, -0.1], [0.2, 1.4, -0.3]] } : { l: [[-0.3, 1.15, -0.1], [-0.2, 1.45, -0.3]] } }));
+  for (const s of [-1, 1]) {
+    const x = -s * 8.05;                                           // side niche: Abundance (viewer's left, +x), Salubrity (right, −x)
+    box(TD, x - 1.4, x + 1.4, 3.95, 9.6, -2.66, -2.6, NICHE);
+    box(TS, x - 1.6, x + 1.6, 9.6, 10.0, -2.85, -2.6, TRAV2); box(TS, x - 1.6, x + 1.6, 3.6, 3.95, -2.9, -2.6, TRAV2);
+    for (const e of [-1, 1]) box(TS, x + e * 1.5 - 0.1, x + e * 1.5 + 0.1, 3.95, 9.6, -2.75, -2.6, TRAV2);
+    statue(TS, x, 3.95, -3.0, 3.6, MARB, { robe: true, lean: s * 0.3,
+      arms: s < 0 ? { l: [[-0.3, 1.18, -0.12], [-0.22, 1.42, -0.2]], r: [[0.25, 1.1, -0.15], [0.12, 1.0, -0.25]] }
+        : { r: [[0.3, 1.2, -0.12], [0.3, 1.55, -0.18]], l: [[-0.22, 1.15, -0.18], [-0.08, 1.2, -0.3]] } });
+    if (s < 0) chain(TS, [[x - 0.4, 3.95 + 2.55, -3.4], [x - 0.6, 3.95 + 3.0, -3.45], [x - 0.55, 3.95 + 3.45, -3.3]], 0.08, 0.28, MARB, 8);   // cornucopia (s < 0: the +x niche)
+    else limb(TS, [x + 0.6, 3.95, -3.15], [x + 0.6, 3.95 + 3.6, -3.15], 0.03, 0.03, MARB, 5);                                                  // staff of Salubrity
+    plaque(g, reliefTex2(s < 0 ? 4 : 5, '#e8dfcc'), x, 13.1, -2.62, 2.8, 3.2);   // reliefs: Agrippa approving the aqueduct / the virgin showing the spring
+  }
+  box(TS, -CW, CW, 15.6, 18, -3.0, -0.5, TRAV);                    // entablature of the centre, frieze inscription
+  box(TS, -CW - 0.2, CW + 0.2, 17.5, 18, -3.3, -0.5, TRAV2);
+  plaque(g, inscription([['PERFECIT · BENEDICTVS · XIV · PON · MAX', 70]], 2048, 110, '#e3d9c4', '#4a3f31'), 0, 16.75, -3.02, 18, 0.95);
+  // attic: inscription between the inner statues, blank panels, balustrade, papal arms with two Fames
+  box(TS, -11.9, 11.9, 18, 21.4, -3.0, -0.5, TRAV); box(TS, -12.1, 12.1, 21.1, 21.45, -3.25, -0.5, TRAV2);
+  plaque(g, inscription([['CLEMENS · XII · PONT · MAX', 60], ['AQVAM · VIRGINEM', 50], ['COPIA · ET · SALVBRITATE · COMMENDATAM', 46],
+    ['CVLTV · MAGNIFICO · ORNAVIT', 46], ['ANNO · DOMINI · MDCCXXXV · PONTIF · VI', 44]], 1024, 400, '#e6dcc7', '#3e3428'), 0, 19.7, -3.03, 7.6, 2.9);
+  for (const s of [-1, 1]) box(TS, s * 6.4 - 1.6, s * 6.4 + 1.6, 18.9, 20.6, -3.08, -3.0, TRAV2);
+  for (const [xa, xb] of [[-11.9, -3.2], [3.2, 11.9]]) {
+    box(TS, xa, xb, 21.45, 21.6, -2.9, -0.6, TRAV2);
+    for (let x = xa + 0.3; x < xb - 0.15; x += 0.42) cyl(TS, x, -2.6, 21.6, 22.15, 0.11, 0.08, TRAV, 6);
+    box(TS, xa, xb, 22.15, 22.35, -2.9, -0.6, TRAV2);
+  }
+  box(TS, -3.2, 3.2, 21.45, 22.6, -2.9, -0.6, TRAV2);               // base of the arms
+  ell(TS, 0, 23.9, -2.4, 1.3, 1.55, 0.25, MARB, 16);               // shield (cartouche)
+  ell(TS, 0, 23.9, -2.62, 0.9, 1.15, 0.1, C('#e8e1d2'), 14);
+  cyl(TS, 0, -2.4, 25.3, 25.65, 0.62, 0.58, MARB, 16); cyl(TS, 0, -2.4, 25.65, 25.95, 0.56, 0.48, MARB, 16); cyl(TS, 0, -2.4, 25.95, 26.3, 0.44, 0.06, MARB, 16);   // tiara
+  for (const s of [-1, 1]) {
+    limb(TS, [s * 1.0, 22.5, -2.2], [s * -1.2, 25.0, -2.2], 0.06, 0.06, MARB, 6); boxC(TS, s * -1.25, -2.2, 0.4, 0.1, 24.9, 25.3, MARB);   // crossed keys behind the shield
+    statue(TS, s * 2.7, 21.9, -2.3, 3.3, MARB, { robe: true, lean: s * 1.1, arms: { [s < 0 ? 'r' : 'l']: [[-s * 0.35, 1.45, -0.15], [-s * 0.6, 1.65, -0.25]] } });
+    ell(TS, s * 3.5, 24.6, -1.9, 0.3, 1.2, 0.8, MARB, 10);          // wings of the Fames
+    for (let i = 0; i < 3; i++) ell(TS, s * (4.6 + i * 0.9), 21.9, -2.2, 0.35, 0.28, 0.3, MARB, 6);   // garlands
+  }
+  // ---- wings: three bays each ----
+  for (const s of [-1, 1]) {
+    const xl = s < 0 ? -W2 : CW, xr = s < 0 ? -CW : W2;
+    for (const y of [0.6, 1.4, 2.2, 3.0]) box(TS, xl, xr, y, y + 0.1, -0.6, -0.5, TRAV2);   // rusticated ground floor
+    box(TS, xl, xr, 3.4, 3.7, -0.85, -0.5, TRAV2);                  // string courses
+    box(TS, xl, xr, 9.6, 10.0, -0.8, -0.5, TRAV2);
+    for (const x of [CW + 0.6, 15.6, 20.1, 24.0]) {                // giant pilasters
+      boxC(TS, s * x, -0.7, 1.2, 0.4, 3.7, 14.3, TRAV);
+      boxC(TS, s * x, -0.8, 1.5, 0.6, 14.3, 15.6, TRAV2);
+      for (const e of [-1, 1]) ell(TS, s * x + e * 0.55, 15.25, -1.0, 0.18, 0.2, 0.14, TRAV2, 6);
+    }
+    for (const x of [13.95, 17.85, 22.05]) {
+      const cx = s * x;
+      box(TD, cx - 0.55, cx + 0.55, 0.9, 2.5, -0.64, -0.6, DARKW);  // barred ground-floor window
+      for (let b = -0.4; b <= 0.41; b += 0.2) box(TS, cx + b - 0.02, cx + b + 0.02, 0.9, 2.5, -0.68, -0.64, C('#555049'));
+      // piano nobile: balcony, aedicule with shutters, triangular pediment
+      box(TS, cx - 1.25, cx + 1.25, 3.8, 4.1, -1.3, -0.5, TRAV2); box(TS, cx - 1.25, cx + 1.25, 4.9, 5.05, -1.3, -0.5, TRAV2);
+      for (let b = -1.05; b <= 1.06; b += 0.3) cyl(TS, cx + b, -1.15, 4.1, 4.9, 0.07, 0.05, TRAV, 6);
+      box(TS, cx - 1.05, cx + 1.05, 5.05, 7.8, -0.6, -0.5, TRAV2); box(TD, cx - 0.78, cx + 0.78, 5.2, 7.6, -0.64, -0.6, SHUT);
+      box(TS, cx - 0.02, cx + 0.02, 5.2, 7.6, -0.66, -0.64, C('#6f7d6b'));
+      for (const e of [-1, 1]) cyl(TS, cx + e * 0.95, -0.75, 5.05, 7.8, 0.12, 0.1, TRAV, 8);
+      box(TS, cx - 1.3, cx + 1.3, 7.8, 8.1, -0.95, -0.5, TRAV);
+      TS.tri([cx - 1.35, 8.1, -0.95], [cx + 1.35, 8.1, -0.95], [cx, 8.85, -0.95], Z, Z, Z, TRAV);
+      slab(TS, cx - 1.45, 8.1, cx, 8.9, 0.12, -1.0, -0.5, TRAV2); slab(TS, cx, 8.9, cx + 1.45, 8.1, 0.12, -1.0, -0.5, TRAV2);
+      // second floor: balcony, window, segmental pediment
+      box(TS, cx - 1.1, cx + 1.1, 10.5, 10.75, -1.1, -0.5, TRAV2); box(TS, cx - 1.1, cx + 1.1, 11.35, 11.5, -1.1, -0.5, TRAV2);
+      for (let b = -0.9; b <= 0.91; b += 0.3) cyl(TS, cx + b, -0.95, 10.75, 11.35, 0.06, 0.045, TRAV, 6);
+      box(TS, cx - 0.95, cx + 0.95, 11.5, 13.9, -0.6, -0.5, TRAV2); box(TD, cx - 0.7, cx + 0.7, 11.65, 13.75, -0.64, -0.6, GLASS);
+      box(TS, cx - 0.02, cx + 0.02, 11.65, 13.75, -0.66, -0.64, TRAV2); box(TS, cx - 0.7, cx + 0.7, 12.95, 13.0, -0.66, -0.64, TRAV2);
+      for (let i = 0; i < 8; i++) {                                  // segmental pediment
+        const a0 = 0.35 + i / 8 * (Math.PI - 0.7), a1 = 0.35 + (i + 1) / 8 * (Math.PI - 0.7), R = 1.35;
+        slab(TS, cx + Math.cos(a1) * R, 13.55 + Math.sin(a1) * R * 0.55, cx + Math.cos(a0) * R, 13.55 + Math.sin(a0) * R * 0.55, 0.16, -0.95, -0.5, TRAV);
+      }
+      box(TS, cx - 0.45, cx + 0.45, 18.6, 19.6, -0.6, -0.5, TRAV2); box(TD, cx - 0.32, cx + 0.32, 18.7, 19.5, -0.64, -0.6, GLASS);   // attic window
+    }
+    for (const x of [15.6, 20.1]) ell(TS, s * x, 19.1, -0.6, 0.9, 0.45, 0.12, TRAV2, 8);   // relief cartouches between the attic windows
+    box(TS, xl, xr, 15.6, 18, -1.1, -0.5, TRAV); box(TS, xl - (s < 0 ? 0.3 : 0), xr + (s > 0 ? 0.3 : 0), 17.5, 18, -1.4, -0.5, TRAV2);
+    box(TS, xl, xr, 18, 20.6, -0.75, -0.5, TRAV); box(TS, xl - (s < 0 ? 0.3 : 0), xr + (s > 0 ? 0.3 : 0), 20.6, 21.1, -1.05, -0.5, TRAV2);
+  }
+  // ---- the reef: stratified travertine slabs, highest in the centre and on the right spur ----
+  const rTop = x => 2.2 + 1.6 * Math.exp(-((x / 9) ** 2)) + (x < -17 ? 2.6 * (-17 - x) / 7.6 : 0) + (x > 19 ? 1.0 * (x - 19) / 5.6 : 0);   // spur on the viewer's right (−x)
+  const rDepth = x => 4.4 + 3.0 * Math.exp(-((x / 9) ** 2)) + (x < -19 ? 1.5 : 0);
+  for (let x = -W2 + 0.5; x <= W2 - 0.4; x += 1.25) for (let d = 0; d < rDepth(x); d += 1.1) {
+    if (Math.abs(x) < 4.6 && d > 2.6) continue;                      // channel of the central cascade
+    const t = d / rDepth(x), top = rTop(x) * (1 - 0.8 * t ** 1.3) + (lrng() - 0.5) * 0.7, th = 0.6 + lrng() * 0.9;
+    rock(TR, x + (lrng() - 0.5) * 0.8, Math.max(-0.4, top - th), -0.5 - d - lrng() * 0.6, 2.0 + lrng() * 1.1, Math.max(0.5, Math.min(th, top + 0.4)), 1.8 + lrng() * 0.8, rockC());
+  }
+  for (let i = 0; i < 40; i++) {                                    // larger blocks under the statues and along the front
+    const x = (lrng() * 2 - 1) * (W2 - 1), d = rDepth(x) * (0.3 + lrng() * 0.7);
+    if (Math.abs(x) < 4.6 && d > 2.6) continue;
+    rock(TR, x, -0.3, -0.5 - d, 2 + lrng() * 1.6, 0.8 + lrng() * 1.2, 1.6 + lrng(), rockC());
+  }
+  for (const s of [-1, 1]) {                                        // slabs carrying the sea-horses and tritons
+    rock(TR, s * 5.6, -0.3, -5.8, 4.6, 1.6, 3.6, rockC()); rock(TR, s * 7.2, -0.3, -7.0, 3.6, 1.1, 2.8, rockC());
+  }
+  cyl(TS, -20.5, -3.2, rTop(-20.5) - 0.3, rTop(-20.5) + 0.9, 0.35, 0.55, MARB, 12);   // the "asso di coppe" vase on the right spur
+  for (let i = 0; i < 6; i++) { const a = i / 6 * 6.2832; limb(TS, [-20.5, rTop(-20.5) - 0.5, -3.2], [-20.5 + Math.cos(a) * 0.9, rTop(-20.5) + 0.2, -3.2 + Math.sin(a) * 0.9], 0.08, 0.02, C('#e4dccb'), 5); }   // carved agave
+  // ---- Oceanus on the shell, the central two-tier cascade, sea-horses and tritons ----
+  for (let i = 0; i < 11; i++) {                                    // scallop shell chariot (ribs), opening forward
+    const a = Math.PI * (0.1 + 0.8 * i / 10);
+    limb(TS, [0, 2.3, -3.4], [Math.cos(a) * 2.0, 2.3 + Math.sin(a) * 0.9, -3.4 - Math.sin(a) * 1.3], 0.12, 0.2, MARB, 6);
+  }
+  ell(TS, 0, 2.4, -3.6, 1.9, 0.5, 1.3, MARB, 14);
+  statue(TS, 0, 3.0, -3.3, 5.8, MARB, { male: true, beard: true, stride: 0.6, lean: -0.25,
+    arms: { r: [[0.35, 1.15, -0.1], [0.45, 0.9, -0.25]], l: [[-0.3, 1.08, 0.05], [-0.18, 0.98, 0.0]] } });
+  limb(TS, [1.5, 6.6, -4.05], [1.3, 3.5, -4.45], 0.05, 0.05, MARB, 6);       // Oceanus' sceptre
+  for (const [x, y, z, rx, ry, rz] of [[-0.55, 7.5, -2.95, 0.6, 0.55, 0.35], [-1.15, 6.6, -2.95, 0.55, 1.0, 0.38], [-1.45, 5.2, -3.1, 0.6, 1.1, 0.45], [-1.2, 3.9, -3.5, 0.75, 0.7, 0.5], [0, 5.25, -3.45, 0.62, 0.5, 0.42]])
+    ell(TS, x, y, z, rx, ry, rz, MARB, 10);                        // cloak from the shoulder down to the shell (viewer's right), drapery at the hips
+  const basin = (cz, rx, rz, yt, k) => {                              // shallow half basin in front of cz, with a lip
+    lathe(TS, 0, cz, [[rx, yt - 1.0], [rx, yt], [rx - 0.3, yt], [rx - 0.3, yt - 0.2], [0, yt - 0.2]], k, 24, 3, Math.PI, 2 * Math.PI, rz / rx);
+    box(TS, -rx, rx, yt - 1.0, yt, cz - 0.01, cz + 0.6, TRAV2);
+  };
+  basin(-4.4, 2.6, 1.6, 2.2, TRAV2);
+  basin(-6.0, 4.6, 2.8, 1.35, TRAV2);
+  // water surfaces of the two tiers
+  for (const [cz, rx, rz, yt] of [[-4.4, 2.3, 1.35, 2.05], [-6.0, 4.3, 2.55, 1.2]]) {
+    const m = new THREE.Mesh(new THREE.CircleGeometry(1, 24, 0, Math.PI).rotateX(-Math.PI / 2), LM.water);
+    m.scale.set(rx, 1, rz); m.position.set(0, yt, cz); g.add(m);
+  }
+  seaHorse(TS, 5.4, 1.1, -6.4, 1.55, MARB, true);   triton(TS, 3.2, 1.0, -7.4, 1.9, MARB, 'lead', -1);   // restive horse (viewer's left)
+  seaHorse(TS, -4.9, 1.1, -6.2, 1.55, MARB, false); triton(TS, -7.4, 0.9, -7.0, 1.9, MARB, 'conch', 1);   // calm horse, triton blowing the conch
+  // ---- basin: front curve from 10 m (ends) to 18 m (centre) out, rim 0.7 m thick, 0.8 m high ----
   const edge = [];
-  for (let i = 0; i <= 40; i++) { const x = W2 - i / 40 * 2 * W2; edge.push([x, -(10 + 8 * Math.cos(Math.PI * x / (2 * W2)) ** 2)]); }
-  const rim = [[W2, -0.5], ...edge, [-W2, -0.5]];
+  for (let i = 0; i <= 40; i++) { const x = W2 + 1 - i / 40 * 2 * (W2 + 1); edge.push([x, -(10 + 8 * Math.cos(Math.PI * x / (2 * W2 + 2)) ** 2)]); }
+  const rim = [[W2 + 1, -0.5], ...edge, [-W2 - 1, -0.5]];
   for (let i = 0; i < rim.length - 1; i++) {
     const [ax, az] = rim[i], [bx, bz] = rim[i + 1], L = Math.hypot(bx - ax, bz - az), nx = (bz - az) / L * 0.35, nz = -(bx - ax) / L * 0.35;
     const O = (x, z, s, y) => [x + nx * s, y, z + nz * s];
     TS.quad(O(ax, az, 1, -0.3), O(bx, bz, 1, -0.3), O(bx, bz, 1, 0.8), O(ax, az, 1, 0.8), Z, Z, Z, Z, TRAV2);
     TS.quad(O(ax, az, -1, -0.3), O(bx, bz, -1, -0.3), O(bx, bz, -1, 0.8), O(ax, az, -1, 0.8), Z, Z, Z, Z, TRAV2);
     TS.quad(O(ax, az, 1, 0.8), O(bx, bz, 1, 0.8), O(bx, bz, -1, 0.8), O(ax, az, -1, 0.8), Z, Z, Z, Z, TRAV);
+    TS.quad(O(ax, az, 1, 0.01), O(bx, bz, 1, 0.01), O(bx, bz, 1 + 4.3, 0.01), O(ax, az, 1 + 4.3, 0.01), Z, Z, Z, Z, C('#c9bfa9'));   // paved border
   }
-  const shape = new THREE.Shape(rim.map(([x, z]) => new THREE.Vector2(x, -z)));
-  const water = new THREE.Mesh(new THREE.ShapeGeometry(shape, 24).rotateX(-Math.PI / 2), LM.water);
+  const water = new THREE.Mesh(new THREE.ShapeGeometry(new THREE.Shape(rim.map(([x, z]) => new THREE.Vector2(x, -z))), 24).rotateX(-Math.PI / 2), LM.water);
   water.position.y = 0.55; water.receiveShadow = true; g.add(water);
-  // cascades: [x, top y, top z, bottom y, bottom z, width]
+  // ---- cascades: [x, top y, top z, bottom y, bottom z, width] ----
   const fallPos = [], fallUv = [];
-  for (const [x, ya, za, yb, zb, w] of [[0, 4.4, -4.2, 2.6, -5.6, 3.2], [0, 2.6, -5.9, 0.55, -8.2, 4.4], [-7.1, 3.4, -3, 0.55, -5.9, 1.6], [7.1, 3.4, -3, 0.55, -5.9, 1.6],
-    [-14, 2.2, -2.6, 0.55, -4.8, 1.2], [14, 2.2, -2.6, 0.55, -4.8, 1.2], [-20, 1.9, -2.4, 0.55, -4.4, 1.1], [20, 1.9, -2.4, 0.55, -4.4, 1.1]]) {
-    const v = Math.hypot(ya - yb, za - zb) / 3;
-    fallPos.push(x - w / 2, ya, za, x + w / 2, ya, za, x + w / 2, yb, zb, x - w / 2, ya, za, x + w / 2, yb, zb, x - w / 2, yb, zb);
-    fallUv.push(0, v, w / 2, v, w / 2, 0, 0, v, w / 2, 0, 0, 0);
+  for (const [x, ya, za, yb, zb, w] of [[0, 2.25, -6.0, 1.2, -6.5, 3.6], [0, 1.35, -8.8, 0.55, -9.5, 8.2], [0, 3.0, -3.9, 2.15, -4.4, 2.2],
+    ...[-8.6, 8.6, -12.5, 12.5, -17, 17.5, -21.5, 22].map((x, i) => {                 // curtains over the front slabs of the reef
+      const za = -0.5 - rDepth(x) - 1.0;                         // just in front of the outermost slabs
+      return [x, 1.25 + (i % 3) * 0.2, za, 0.55, za - 0.6, 1.1 + (i % 3) * 0.3];
+    })]) {
+    // two pieces: over the lip (short, forward), then the fall (nearly vertical, slightly forward)
+    const lipY = ya - 0.12, lipZ = za - 0.3, v0 = 0.12, v1 = v0 + Math.hypot(lipY - yb, lipZ - zb) / 3;
+    for (const [y1, z1, y2, z2, va, vb] of [[ya, za, lipY, lipZ, v1 + v0, v1], [lipY, lipZ, yb, zb, v1, 0]]) {
+      fallPos.push(x - w / 2, y1, z1, x + w / 2, y1, z1, x + w / 2, y2, z2, x - w / 2, y1, z1, x + w / 2, y2, z2, x - w / 2, y2, z2);
+      fallUv.push(0, va, w / 2, va, w / 2, vb, 0, va, w / 2, vb, 0, vb);
+    }
   }
   const fg = new THREE.BufferGeometry(); fg.setAttribute('position', new THREE.Float32BufferAttribute(fallPos, 3)); fg.setAttribute('uv', new THREE.Float32BufferAttribute(fallUv, 2));
   const falls = new THREE.Mesh(fg, LM.fall); falls.renderOrder = 3; g.add(falls);
-  g.add(TS.mesh(LM.stone), TD.mesh(MAT.flat));
+  g.add(TS.mesh(LM.stone), TR.mesh(LM.stone), TK.mesh(LM.coffer), TD.mesh(MAT.flat));
   scene.add(g);
   const toL = lframe(TRV, TRV.rot);
-  KEEP_OUT.push((x, y) => { const [lx, lz] = toL(x, y); return Math.abs(lx) < 27 && lz > -21 && lz < 2; });
+  KEEP_OUT.push((x, y) => { const [lx, lz] = toL(x, y); return Math.abs(lx) < 30 && lz > -24 && lz < 2; });
 }
 
 // ---------- bike ride: Piazza Venezia -> Circo Massimo -> around the Colosseum -> Via dei Fori Imperiali -> back ----------
@@ -2321,7 +2524,27 @@ for (const l of LABELS) if (!['Kolosseum', 'Konstantinsbogen'].includes(l.name))
   if (I18N.de['l.' + l.name]) setT(o, 'l.' + l.name); else o.textContent = l.name;
   placeSel.appendChild(o);
 }
-Object.assign(VIEWS, { Pantheon: [210, 70, 170, -1291, 940, 16], 'Trevi-Brunnen': [340.6, 55, 62, -756, 1178, 6] });   // closer, from the piazza in front
+Object.assign(VIEWS, { Pantheon: [210, 70, 170, -1291, 940, 16], 'Trevi-Brunnen': [340.6, 70, 60, -756, 1184, 10] });   // closer, from the piazza in front
+// click navigation (overview only): a click (not a drag) flies to the clicked point, keeping the viewing direction;
+// each click brings the camera closer (0.6 × the distance, 80…600 m). The click goes through the inverse fisheye warp.
+{
+  const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), down = { x: 0, y: 0, t: 0 };
+  const skip = o => { for (let p = o; p; p = p.parent) if (!p.visible || p === routeLine || (NIGHT.dome && p === NIGHT.dome)) return true;
+    const m = Array.isArray(o.material) ? o.material[0] : o.material; return !m || (m.transparent && !m.depthWrite); };
+  renderer.domElement.addEventListener('pointerdown', e => { down.x = e.clientX; down.y = e.clientY; down.t = performance.now(); });
+  renderer.domElement.addEventListener('pointerup', e => {
+    if (ride.on || e.button !== 0 || Math.hypot(e.clientX - down.x, e.clientY - down.y) > 6 || performance.now() - down.t > 450) return;
+    const r = renderer.domElement.getBoundingClientRect(), nx = (e.clientX - r.left) / r.width * 2 - 1, ny = 1 - (e.clientY - r.top) / r.height * 2;
+    if (FISH.on) {                                                // screen -> scene NDC: the shader's forward mapping
+      const a = r.width / r.height, px = nx * a, f = (1 - FISH.cur) + FISH.cur * (px * px + ny * ny), ov = (1 - FISH.cur) + FISH.cur * (a * a + 1);
+      ndc.set(px * f / a / ov, ny * f / ov); ray.setFromCamera(ndc, overCam);
+    } else { ndc.set(nx, ny); ray.setFromCamera(ndc, camera); }
+    const hit = ray.intersectObjects(scene.children, true).find(h => !skip(h.object));
+    if (!hit) return;
+    const off = camera.position.clone().sub(controls.target), d = THREE.MathUtils.clamp(off.length() * 0.6, 80, 600);
+    tween = { p0: camera.position.clone(), t0: controls.target.clone(), p1: hit.point.clone().add(off.setLength(d)), t1: hit.point.clone(), s: performance.now() };
+  });
+}
 placeSel.onchange = () => { if (!ride.on) view(placeSel.value); placeSel.value = ''; };   // back to the placeholder so the same place can be picked again
 document.getElementById('rot').onclick = e => { controls.autoRotate = !controls.autoRotate; e.target.classList.toggle('on', controls.autoRotate); };
 document.getElementById('lab').onclick = e => { showLabels = !showLabels; e.target.classList.toggle('on', showLabels); };
@@ -2484,7 +2707,7 @@ function setNight(on) {
   hemi.color.setHex(on ? 0x3a4a78 : DAY.hemi[0]); hemi.groundColor.setHex(on ? 0x1a1612 : DAY.hemi[1]); hemi.intensity = on ? 0.6 : DAY.hemi[2];
   sun.color.setHex(on ? 0x9db2ff : DAY.sun[0]); sun.intensity = on ? 1.2 : DAY.sun[1];
   MAT.win.emissiveIntensity = MAT.shop.emissiveIntensity = on ? 1 : 0;
-  MAT.col.emissiveIntensity = on ? 0.6 : 0; MV.m.emissiveIntensity = on ? 0.15 : 0; LM.stone.emissiveIntensity = on ? 0.35 : 0; LM.brick.emissiveIntensity = on ? 0.3 : 0; LM.water.emissiveIntensity = on ? 0.6 : 0; MV.g.emissiveIntensity = on ? 5 : 1;
+  MAT.col.emissiveIntensity = on ? 0.6 : 0; MV.m.emissiveIntensity = on ? 0.15 : 0; LM.stone.emissiveIntensity = on ? 0.35 : 0; LM.brick.emissiveIntensity = on ? 0.3 : 0; LM.coffer.emissiveIntensity = on ? 0.35 : 0; LM.water.emissiveIntensity = on ? 0.6 : 0; MV.g.emissiveIntensity = on ? 5 : 1;
   NIGHT.frame = 0; renderer.shadowMap.needsUpdate = true;
   document.getElementById('nightBtn').classList.toggle('on', on);
 }

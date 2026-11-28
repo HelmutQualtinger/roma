@@ -27,6 +27,7 @@ Beim ersten Aufruf richtet sich die Sprache nach dem Browser; ohne passende Spra
 | Drehen (um den Mittelpunkt) | Linke Taste ziehen | Mit einem Finger ziehen |
 | Verschieben | Rechte Taste ziehen | Mit zwei Fingern ziehen |
 | Zoomen | Mausrad oder Trackpad-Geste | Zwei Finger zusammen- oder auseinanderziehen |
+| Hinfliegen | Kurz auf einen Punkt klicken: Die Kamera fliegt dorthin und kommt mit jedem Klick näher (bis 80 m) | Kurz tippen |
 
 - Die Kamera lässt sich bis unter die Horizontale drehen, um in den Himmel zu schauen (nachts sichtbar: Sterne und Mond).
 - Der Zoom ist begrenzt: näher als 25 m oder weiter als 5 km geht es nicht.
